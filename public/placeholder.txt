@@ -1,0 +1,5 @@
+Logo ve diğer statik dosyaları bu klasöre ekleyin.
+
+- logo.png : Dernek logosu
+- favicon.ico : Site favicon
+- diğer görseller... 
