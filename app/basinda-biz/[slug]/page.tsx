@@ -22,10 +22,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
 export async function generateStaticParams() {
   const pressCoverage = await getPressCoverage();
-  // Only for internal articles (no external URL)
-  return pressCoverage
-    .filter(item => !item.externalUrl)
-    .map(item => ({ slug: item.slug }));
+  // Include all press coverage items, not just the ones without external URLs
+  return pressCoverage.map(item => ({ slug: item.slug }));
 }
 
 export default async function PressCoverageDetailPage({ params }: { params: { slug: string } }) {
