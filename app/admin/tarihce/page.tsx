@@ -1,45 +1,40 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FaHistory, FaImage, FaCalendarAlt, FaUser, FaBuilding, FaUsers } from 'react-icons/fa';
+import { FaHistory, FaImage, FaCalendarAlt, FaUser, FaBuilding, FaUsers, FaTrash, FaPlus } from 'react-icons/fa';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { HistoryContent } from '@/types';
-import { getHistoryContent } from '@/lib/data';
 
 export default function HistoryManagementPage() {
   const [historyContent, setHistoryContent] = useState<HistoryContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
+  
+  // Kilometre taşı eklemek için
+  const [newMilestone, setNewMilestone] = useState({ year: '', description: '' });
+  
+  // Yeni görsel eklemek için
+  const [newImage, setNewImage] = useState({ url: '', caption: '' });
 
   useEffect(() => {
     const fetchHistoryContent = async () => {
       try {
         console.log('Fetching history content...');
-        // API'den veri çekmeyi dene
-        try {
-          const response = await fetch('/api/admin/history');
-          
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          console.log('Received data from API:', data);
-          
-          if (data.success) {
-            setHistoryContent(data.data);
-            return;
-          }
-        } catch (apiError) {
-          console.error('API veri alma hatası:', apiError);
-          // API hatası durumunda devam et, mock data kullanılacak
+        const response = await fetch('/api/admin/history');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
         }
-
-        // API başarısız olduysa mock veriyi kullan
-        console.log('Using mock data as fallback...');
-        const mockData = await getHistoryContent();
-        setHistoryContent(mockData);
+        
+        const data = await response.json();
+        console.log('Received data:', data);
+        
+        if (data.success) {
+          setHistoryContent(data.data);
+        } else {
+          throw new Error(data.message || 'Veri alınamadı');
+        }
       } catch (error) {
         console.error('Veri alma hatası:', error);
         setMessage({
@@ -89,46 +84,37 @@ export default function HistoryManagementPage() {
       
       console.log('Sending data:', dataToSend);
 
-      // API'ye göndermeyi dene
-      try {
-        const response = await fetch('/api/admin/history', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(dataToSend),
-        });
+      const response = await fetch('/api/admin/history', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dataToSend),
+      });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        console.log('Received result from API:', result);
-
-        if (result.success) {
-          setMessage({
-            text: 'Tarihçe içeriği başarıyla güncellendi.',
-            type: 'success'
-          });
-          return;
-        }
-      } catch (apiError) {
-        console.error('API kaydetme hatası:', apiError);
-        // API hatası durumunda devam et, mock başarı mesajı gösterilecek
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
-      // API yoksa veya başarısız olduysa, başarılı kabul et
-      console.log('Simulating successful update (no API in static export)');
-      setHistoryContent({
-        ...historyContent!,
-        ...dataToSend
-      } as HistoryContent);
-      
-      setMessage({
-        text: 'Tarihçe içeriği başarıyla güncellendi. (Demo Modu)',
-        type: 'success'
-      });
+      const result = await response.json();
+      console.log('Received result:', result);
+
+      if (result.success) {
+        setMessage({
+          text: 'Tarihçe içeriği başarıyla güncellendi.',
+          type: 'success'
+        });
+        
+        // Güncel veriyi state'e yükle
+        if (result.updatedData) {
+          setHistoryContent(result.updatedData);
+        }
+      } else {
+        setMessage({
+          text: `Hata: ${result.message}`,
+          type: 'error'
+        });
+      }
     } catch (error) {
       console.error('Kaydetme hatası:', error);
       setMessage({
@@ -137,6 +123,196 @@ export default function HistoryManagementPage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+  
+  // Kilometre taşı silme işlevi
+  const deleteMilestone = async (index: number) => {
+    if (!historyContent) return;
+    
+    try {
+      const updatedMilestones = [...historyContent.milestones];
+      updatedMilestones.splice(index, 1);
+      
+      const response = await fetch('/api/admin/history', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...historyContent,
+          milestones: updatedMilestones
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setHistoryContent({
+          ...historyContent,
+          milestones: updatedMilestones
+        });
+        setMessage({
+          text: 'Kilometre taşı başarıyla silindi.',
+          type: 'success'
+        });
+      } else {
+        throw new Error(result.message || 'İşlem başarısız');
+      }
+    } catch (error) {
+      console.error('Silme hatası:', error);
+      setMessage({
+        text: `Kilometre taşı silinemedi: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
+        type: 'error'
+      });
+    }
+  };
+  
+  // Kilometre taşı ekleme işlevi
+  const addMilestone = async () => {
+    if (!historyContent || !newMilestone.year || !newMilestone.description) return;
+    
+    try {
+      const updatedMilestones = [
+        ...historyContent.milestones,
+        { year: newMilestone.year, description: newMilestone.description }
+      ];
+      
+      const response = await fetch('/api/admin/history', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...historyContent,
+          milestones: updatedMilestones
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setHistoryContent({
+          ...historyContent,
+          milestones: updatedMilestones
+        });
+        setMessage({
+          text: 'Kilometre taşı başarıyla eklendi.',
+          type: 'success'
+        });
+        setNewMilestone({ year: '', description: '' });
+      } else {
+        throw new Error(result.message || 'İşlem başarısız');
+      }
+    } catch (error) {
+      console.error('Ekleme hatası:', error);
+      setMessage({
+        text: `Kilometre taşı eklenemedi: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
+        type: 'error'
+      });
+    }
+  };
+  
+  // Görsel silme işlevi
+  const deleteImage = async (index: number) => {
+    if (!historyContent) return;
+    
+    try {
+      const updatedImages = [...historyContent.additionalImages];
+      updatedImages.splice(index, 1);
+      
+      const response = await fetch('/api/admin/history', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...historyContent,
+          additionalImages: updatedImages
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setHistoryContent({
+          ...historyContent,
+          additionalImages: updatedImages
+        });
+        setMessage({
+          text: 'Görsel başarıyla silindi.',
+          type: 'success'
+        });
+      } else {
+        throw new Error(result.message || 'İşlem başarısız');
+      }
+    } catch (error) {
+      console.error('Silme hatası:', error);
+      setMessage({
+        text: `Görsel silinemedi: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
+        type: 'error'
+      });
+    }
+  };
+  
+  // Görsel ekleme işlevi
+  const addImage = async () => {
+    if (!historyContent || !newImage.url) return;
+    
+    try {
+      const updatedImages = [
+        ...historyContent.additionalImages,
+        { url: newImage.url, caption: newImage.caption || '' }
+      ];
+      
+      const response = await fetch('/api/admin/history', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...historyContent,
+          additionalImages: updatedImages
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setHistoryContent({
+          ...historyContent,
+          additionalImages: updatedImages
+        });
+        setMessage({
+          text: 'Görsel başarıyla eklendi.',
+          type: 'success'
+        });
+        setNewImage({ url: '', caption: '' });
+      } else {
+        throw new Error(result.message || 'İşlem başarısız');
+      }
+    } catch (error) {
+      console.error('Ekleme hatası:', error);
+      setMessage({
+        text: `Görsel eklenemedi: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
+        type: 'error'
+      });
     }
   };
 
@@ -330,33 +506,59 @@ export default function HistoryManagementPage() {
                   <input 
                     type="text" 
                     className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                    defaultValue={milestone.year}
+                    value={milestone.year}
+                    readOnly
                   />
                 </div>
                 <div className="flex-1">
                   <input 
                     type="text" 
                     className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                    defaultValue={milestone.description}
+                    value={milestone.description}
+                    readOnly
                   />
                 </div>
                 <button 
                   type="button" 
                   className="text-red-500 hover:text-red-700"
+                  onClick={() => deleteMilestone(index)}
                 >
-                  Sil
+                  <FaTrash />
                 </button>
               </div>
             ))}
           </div>
           
-          <div className="mt-4">
-            <button 
-              type="button"
-              className="bg-secondary hover:bg-secondary-dark text-white px-4 py-2 rounded-md"
-            >
-              Yeni Kilometre Taşı Ekle
-            </button>
+          <div className="mt-6 border-t border-gray-200 pt-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Yeni Kilometre Taşı Ekle</h3>
+            <div className="flex items-center space-x-3">
+              <div className="w-16">
+                <input 
+                  type="text" 
+                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                  placeholder="Yıl"
+                  value={newMilestone.year}
+                  onChange={(e) => setNewMilestone({...newMilestone, year: e.target.value})}
+                />
+              </div>
+              <div className="flex-1">
+                <input 
+                  type="text" 
+                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                  placeholder="Açıklama"
+                  value={newMilestone.description}
+                  onChange={(e) => setNewMilestone({...newMilestone, description: e.target.value})}
+                />
+              </div>
+              <button 
+                type="button"
+                className="bg-secondary hover:bg-secondary-dark text-white p-2 rounded-md"
+                onClick={addMilestone}
+                disabled={!newMilestone.year || !newMilestone.description}
+              >
+                <FaPlus />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -380,38 +582,51 @@ export default function HistoryManagementPage() {
                   type="text" 
                   className="block w-full mb-2 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                   placeholder="Görsel URL"
-                  defaultValue={image.url}
+                  value={image.url}
+                  readOnly
                 />
                 <input 
                   type="text" 
                   className="block w-full mb-2 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                   placeholder="Açıklama"
-                  defaultValue={image.caption}
+                  value={image.caption}
+                  readOnly
                 />
                 <button 
                   type="button" 
                   className="text-red-500 hover:text-red-700 text-sm"
+                  onClick={() => deleteImage(index)}
                 >
                   Kaldır
                 </button>
               </div>
             ))}
             
-            <div className="border border-dashed border-gray-300 rounded-md p-3 flex flex-col items-center justify-center text-gray-400 hover:text-gray-500 hover:border-gray-400 transition">
-              <div className="p-4">
-                <FaImage className="mx-auto h-12 w-12" />
-                <p className="mt-1 text-sm text-center">Yeni Görsel Ekle</p>
-              </div>
+            <div className="border border-dashed border-gray-300 rounded-md p-3">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Yeni Görsel Ekle</h3>
+              <input 
+                type="text" 
+                className="block w-full mb-2 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                placeholder="Görsel URL"
+                value={newImage.url}
+                onChange={(e) => setNewImage({...newImage, url: e.target.value})}
+              />
+              <input 
+                type="text" 
+                className="block w-full mb-2 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                placeholder="Açıklama"
+                value={newImage.caption}
+                onChange={(e) => setNewImage({...newImage, caption: e.target.value})}
+              />
+              <button 
+                type="button"
+                className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-md w-full"
+                onClick={addImage}
+                disabled={!newImage.url}
+              >
+                Ekle
+              </button>
             </div>
-          </div>
-          
-          <div className="mt-6">
-            <button 
-              type="button"
-              className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-md"
-            >
-              Görselleri Güncelle
-            </button>
           </div>
         </div>
       </div>

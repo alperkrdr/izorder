@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { FaMapMarkerAlt, FaPhone, FaEnvelope, FaFacebook, FaInstagram, FaUserPlus } from 'react-icons/fa';
 import { ContactInfo } from '@/types';
-import { getContactInfo } from '@/lib/data';
 
 export default function ContactManagementPage() {
   const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
@@ -16,30 +15,20 @@ export default function ContactManagementPage() {
     const fetchContactInfo = async () => {
       try {
         console.log('Fetching contact information...');
-        // API'den veri çekmeyi dene
-        try {
-          const response = await fetch('/api/admin/contact');
-          
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          console.log('Received contact data from API:', data);
-          
-          if (data.success) {
-            setContactInfo(data.data);
-            return;
-          }
-        } catch (apiError) {
-          console.error('API veri alma hatası:', apiError);
-          // API hatası durumunda devam et, mock data kullanılacak
+        const response = await fetch('/api/admin/contact');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
         }
-
-        // API başarısız olduysa mock veriyi kullan
-        console.log('Using mock contact data as fallback...');
-        const mockData = await getContactInfo();
-        setContactInfo(mockData);
+        
+        const data = await response.json();
+        console.log('Received contact data:', data);
+        
+        if (data.success) {
+          setContactInfo(data.data);
+        } else {
+          throw new Error(data.message || 'Veri alınamadı');
+        }
       } catch (error) {
         console.error('Veri alma hatası:', error);
         setMessage({
@@ -84,46 +73,37 @@ export default function ContactManagementPage() {
       
       console.log('Sending contact data:', dataToSend);
 
-      // API'ye göndermeyi dene
-      try {
-        const response = await fetch('/api/admin/contact', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(dataToSend),
-        });
+      const response = await fetch('/api/admin/contact', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dataToSend),
+      });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        console.log('Received result from API:', result);
-
-        if (result.success) {
-          setMessage({
-            text: 'İletişim bilgileri başarıyla güncellendi.',
-            type: 'success'
-          });
-          return;
-        }
-      } catch (apiError) {
-        console.error('API kaydetme hatası:', apiError);
-        // API hatası durumunda devam et, mock başarı mesajı gösterilecek
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
-      // API yoksa veya başarısız olduysa, başarılı kabul et
-      console.log('Simulating successful update (no API in static export)');
-      setContactInfo({
-        ...contactInfo!,
-        ...dataToSend
-      } as ContactInfo);
-      
-      setMessage({
-        text: 'İletişim bilgileri başarıyla güncellendi. (Demo Modu)',
-        type: 'success'
-      });
+      const result = await response.json();
+      console.log('Received result:', result);
+
+      if (result.success) {
+        setMessage({
+          text: 'İletişim bilgileri başarıyla güncellendi.',
+          type: 'success'
+        });
+        
+        // Güncel veriyi state'e yükle
+        if (result.updatedData) {
+          setContactInfo(result.updatedData);
+        }
+      } else {
+        setMessage({
+          text: `Hata: ${result.message}`,
+          type: 'error'
+        });
+      }
     } catch (error) {
       console.error('Kaydetme hatası:', error);
       setMessage({
