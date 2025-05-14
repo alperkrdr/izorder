@@ -14,8 +14,16 @@ export default function ContactManagementPage() {
   useEffect(() => {
     const fetchContactInfo = async () => {
       try {
+        console.log('Fetching contact information...');
         const response = await fetch('/api/admin/contact');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
         const data = await response.json();
+        console.log('Received contact data:', data);
+        
         if (data.success) {
           setContactInfo(data.data);
         } else {
@@ -28,7 +36,7 @@ export default function ContactManagementPage() {
       } catch (error) {
         console.error('Veri alma hatası:', error);
         setMessage({
-          text: 'İletişim bilgileri alınamadı. Lütfen daha sonra tekrar deneyin.',
+          text: `İletişim bilgileri alınamadı: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
           type: 'error'
         });
       } finally {
@@ -45,6 +53,7 @@ export default function ContactManagementPage() {
     setMessage(null);
 
     try {
+      console.log('Submitting contact form...');
       const form = e.target as HTMLFormElement;
       const formData = new FormData(form);
       
@@ -55,24 +64,33 @@ export default function ContactManagementPage() {
       const facebook = formData.get('facebook') as string;
       const instagram = formData.get('instagram') as string;
 
+      const dataToSend = {
+        address,
+        phone,
+        email,
+        mapEmbedUrl,
+        socialMedia: {
+          facebook,
+          instagram
+        }
+      };
+      
+      console.log('Sending contact data:', dataToSend);
+
       const response = await fetch('/api/admin/contact', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          address,
-          phone,
-          email,
-          mapEmbedUrl,
-          socialMedia: {
-            facebook,
-            instagram
-          }
-        }),
+        body: JSON.stringify(dataToSend),
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
       const result = await response.json();
+      console.log('Received result:', result);
 
       if (result.success) {
         setMessage({
@@ -88,7 +106,7 @@ export default function ContactManagementPage() {
     } catch (error) {
       console.error('Kaydetme hatası:', error);
       setMessage({
-        text: 'Bir hata oluştu. Lütfen daha sonra tekrar deneyin.',
+        text: `Bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
         type: 'error'
       });
     } finally {

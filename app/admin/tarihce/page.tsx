@@ -14,8 +14,16 @@ export default function HistoryManagementPage() {
   useEffect(() => {
     const fetchHistoryContent = async () => {
       try {
+        console.log('Fetching history content...');
         const response = await fetch('/api/admin/history');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
         const data = await response.json();
+        console.log('Received data:', data);
+        
         if (data.success) {
           setHistoryContent(data.data);
         } else {
@@ -28,7 +36,7 @@ export default function HistoryManagementPage() {
       } catch (error) {
         console.error('Veri alma hatası:', error);
         setMessage({
-          text: 'Tarihçe içeriği alınamadı. Lütfen daha sonra tekrar deneyin.',
+          text: `Tarihçe içeriği alınamadı: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
           type: 'error'
         });
       } finally {
@@ -45,6 +53,7 @@ export default function HistoryManagementPage() {
     setMessage(null);
 
     try {
+      console.log('Submitting form...');
       // Form verilerini topla
       const form = e.target as HTMLFormElement;
       const formData = new FormData(form);
@@ -58,27 +67,36 @@ export default function HistoryManagementPage() {
       const initialMemberCount = formData.get('initialMemberCount') as string;
       const currentMemberCount = formData.get('currentMemberCount') as string;
 
+      const dataToSend = {
+        content,
+        mainImageUrl,
+        foundingDate,
+        foundingPresident,
+        legalStatus,
+        initialMemberCount,
+        currentMemberCount,
+        // Mevcut milestone ve image verilerini koruyoruz
+        milestones: historyContent?.milestones || [],
+        additionalImages: historyContent?.additionalImages || []
+      };
+      
+      console.log('Sending data:', dataToSend);
+
       // API'ye gönder
       const response = await fetch('/api/admin/history', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          content,
-          mainImageUrl,
-          foundingDate,
-          foundingPresident,
-          legalStatus,
-          initialMemberCount,
-          currentMemberCount,
-          // Mevcut milestone ve image verilerini koruyoruz
-          milestones: historyContent?.milestones || [],
-          additionalImages: historyContent?.additionalImages || []
-        }),
+        body: JSON.stringify(dataToSend),
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
       const result = await response.json();
+      console.log('Received result:', result);
 
       if (result.success) {
         setMessage({
@@ -94,7 +112,7 @@ export default function HistoryManagementPage() {
     } catch (error) {
       console.error('Kaydetme hatası:', error);
       setMessage({
-        text: 'Bir hata oluştu. Lütfen daha sonra tekrar deneyin.',
+        text: `Bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
         type: 'error'
       });
     } finally {
