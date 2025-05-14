@@ -1,9 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'export',
   images: {
-    domains: ['picsum.photos', 'images.unsplash.com'],
+    unoptimized: true,
   },
 };
 
-module.exports = nextConfig; 
+module.exports = nextConfig;

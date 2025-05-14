@@ -7,8 +7,8 @@ import Footer from '@/components/layout/Footer';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'İzorder - İzmir-Ordu Kültür ve Dayanışma Derneği',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği (İzorder) resmi web sitesi',
+  title: 'İzorder - İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği',
+  description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği (İzorder) resmi web sitesi',
 };
 
 export default function RootLayout({

@@ -2,9 +2,9 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'İzorder - İzmir-Ordu Kültür ve Dayanışma Derneği',
+    name: 'İzorder - İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği',
     short_name: 'İzorder',
-    description: 'İzmir-Ordu Kültür ve Dayanışma Derneği Resmi Web Sitesi',
+    description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği Resmi Web Sitesi',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

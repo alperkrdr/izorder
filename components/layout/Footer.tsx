@@ -44,7 +44,7 @@ export default function Footer() {
               <span className="text-xl font-bold">İzorder</span>
             </div>
             <p className="text-white/80 mb-4">
-              İzmir-Ordu Kültür ve Dayanışma Derneği, kültürel değerlerimizi yaşatmak ve dayanışmayı güçlendirmek amacıyla kurulmuştur.
+              İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği, kültürel değerlerimizi yaşatmak ve dayanışmayı güçlendirmek amacıyla kurulmuştur.
             </p>
           </div>
           
@@ -116,7 +116,7 @@ export default function Footer() {
         </div>
         
         <div className="border-t border-white/20 mt-8 pt-6 text-center text-white/60 text-sm">
-          <p>&copy; {new Date().getFullYear()} İzmir-Ordu Kültür ve Dayanışma Derneği. Tüm hakları saklıdır.</p>
+          <p>&copy; {new Date().getFullYear()} İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği. Tüm hakları saklıdır.</p>
         </div>
       </div>
     </footer>

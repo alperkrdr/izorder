@@ -3,7 +3,7 @@ import { getHistoryContent } from '@/lib/data';
 
 export const metadata = {
   title: 'Tarihçe - İzorder',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği Tarihçesi',
+  description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği Tarihçesi',
 };
 
 export default async function HistoryPage() {

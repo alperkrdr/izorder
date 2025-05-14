@@ -4,7 +4,7 @@ import { getPressCoverage } from '@/lib/data';
 
 export const metadata = {
   title: 'Basında Biz - İzorder',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği basın haberleri',
+  description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği basın haberleri',
 };
 
 export default async function PressCoveragePage() {

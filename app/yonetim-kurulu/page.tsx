@@ -4,7 +4,7 @@ import { getBoardMembers } from '@/lib/data';
 
 export const metadata = {
   title: 'Yönetim Kurulu - İzorder',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği Yönetim Kurulu',
+  description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği Yönetim Kurulu',
 };
 
 export default async function BoardPage() {

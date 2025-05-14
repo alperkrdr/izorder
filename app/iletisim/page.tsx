@@ -3,7 +3,7 @@ import { getContactInfo } from '@/lib/data';
 
 export const metadata = {
   title: 'İletişim - İzorder',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği İletişim Bilgileri',
+  description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği İletişim Bilgileri',
 };
 
 export default async function ContactPage() {

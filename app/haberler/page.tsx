@@ -4,7 +4,7 @@ import { getAllNews } from '@/lib/data';
 
 export const metadata = {
   title: 'Haberler - İzorder',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği Haberleri',
+  description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği Haberleri',
 };
 
 export default async function NewsPage() {

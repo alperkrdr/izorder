@@ -41,7 +41,7 @@ export default function Header() {
             </div>
             <div>
               <span className="text-xl font-bold text-primary">İzorder</span>
-              <span className="block text-xs text-gray-600">İzmir-Ordu Kültür ve Dayanışma Derneği</span>
+              <span className="block text-xs text-gray-600">İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği</span>
             </div>
           </Link>
 

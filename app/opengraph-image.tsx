@@ -4,7 +4,7 @@ import { ImageResponse } from 'next/og';
 export const runtime = 'edge';
 
 // Image metadata
-export const alt = 'İzorder - İzmir-Ordu Kültür ve Dayanışma Derneği';
+export const alt = 'İzorder - İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği';
 export const size = {
   width: 1200,
   height: 630,
@@ -72,7 +72,7 @@ export default async function Image() {
           <div style={{ color: '#6A0DAD', fontSize: 56 }}>İzorder</div>
         </div>
         <div style={{ color: '#333', fontSize: 36, marginTop: -8 }}>
-          İzmir-Ordu Kültür ve Dayanışma Derneği
+          İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği
         </div>
       </div>
     ),

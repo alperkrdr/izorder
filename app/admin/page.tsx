@@ -5,7 +5,7 @@ import { getDashboardData } from '@/lib/data';
 
 export const metadata = {
   title: 'Yönetim Paneli - İzorder',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği Yönetim Paneli',
+  description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği Yönetim Paneli',
 };
 
 export default async function AdminDashboard() {

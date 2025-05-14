@@ -10,7 +10,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!pressCoverage) {
     return {
       title: 'Basın Haberi Bulunamadı - İzorder',
-      description: 'İzmir-Ordu Kültür ve Dayanışma Derneği',
+      description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği',
     };
   }
   

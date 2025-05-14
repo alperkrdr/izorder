@@ -3,7 +3,7 @@ import { getAllGalleryImages } from '@/lib/data';
 
 export const metadata = {
   title: 'Galeri - İzorder',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği Fotoğraf Galerisi',
+  description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği Fotoğraf Galerisi',
 };
 
 export default async function GalleryPage() {
