@@ -1,14 +1,120 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { getContactInfo } from '@/lib/data';
 import { FaMapMarkerAlt, FaPhone, FaEnvelope, FaFacebook, FaInstagram, FaUserPlus } from 'react-icons/fa';
+import { ContactInfo } from '@/types';
 
-export const metadata = {
-  title: 'İletişim Bilgileri Yönetimi - İzorder',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği İletişim Bilgileri Yönetimi',
-};
+export default function ContactManagementPage() {
+  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
 
-export default async function ContactManagementPage() {
-  const contactInfo = await getContactInfo();
+  useEffect(() => {
+    const fetchContactInfo = async () => {
+      try {
+        const response = await fetch('/api/admin/contact');
+        const data = await response.json();
+        if (data.success) {
+          setContactInfo(data.data);
+        } else {
+          console.error('Veri alma hatası:', data.message);
+          setMessage({
+            text: 'İletişim bilgileri alınamadı. Lütfen daha sonra tekrar deneyin.',
+            type: 'error'
+          });
+        }
+      } catch (error) {
+        console.error('Veri alma hatası:', error);
+        setMessage({
+          text: 'İletişim bilgileri alınamadı. Lütfen daha sonra tekrar deneyin.',
+          type: 'error'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContactInfo();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      const form = e.target as HTMLFormElement;
+      const formData = new FormData(form);
+      
+      const address = formData.get('address') as string;
+      const phone = formData.get('phone') as string;
+      const email = formData.get('email') as string;
+      const mapEmbedUrl = formData.get('mapEmbedUrl') as string;
+      const facebook = formData.get('facebook') as string;
+      const instagram = formData.get('instagram') as string;
+
+      const response = await fetch('/api/admin/contact', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address,
+          phone,
+          email,
+          mapEmbedUrl,
+          socialMedia: {
+            facebook,
+            instagram
+          }
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage({
+          text: 'İletişim bilgileri başarıyla güncellendi.',
+          type: 'success'
+        });
+      } else {
+        setMessage({
+          text: `Hata: ${result.message}`,
+          type: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Kaydetme hatası:', error);
+      setMessage({
+        text: 'Bir hata oluştu. Lütfen daha sonra tekrar deneyin.',
+        type: 'error'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-gray-500">Yükleniyor...</div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (!contactInfo) {
+    return (
+      <AdminLayout>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <p>İletişim bilgileri yüklenemedi. Lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.</p>
+        </div>
+      </AdminLayout>
+    );
+  }
   
   return (
     <AdminLayout>
@@ -17,6 +123,12 @@ export default async function ContactManagementPage() {
         <p className="text-gray-600 mt-1">Dernek iletişim bilgilerini düzenleyebilirsiniz.</p>
       </div>
 
+      {message && (
+        <div className={`mb-6 p-4 rounded ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {message.text}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* İletişim Bilgileri Formu */}
         <div className="bg-white shadow-md rounded-lg overflow-hidden">
@@ -24,7 +136,7 @@ export default async function ContactManagementPage() {
             <h2 className="text-lg font-medium text-gray-800">İletişim Bilgileri</h2>
           </div>
           <div className="p-6">
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={handleSubmit}>
               {/* Adres */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -35,6 +147,7 @@ export default async function ContactManagementPage() {
                     <FaMapMarkerAlt className="text-gray-500" />
                   </div>
                   <textarea 
+                    name="address"
                     rows={3}
                     className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                     defaultValue={contactInfo.address}
@@ -52,6 +165,7 @@ export default async function ContactManagementPage() {
                     <FaPhone className="text-gray-500" />
                   </div>
                   <input 
+                    name="phone"
                     type="text"
                     className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                     defaultValue={contactInfo.phone}
@@ -69,6 +183,7 @@ export default async function ContactManagementPage() {
                     <FaEnvelope className="text-gray-500" />
                   </div>
                   <input 
+                    name="email"
                     type="email"
                     className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                     defaultValue={contactInfo.email}
@@ -82,6 +197,7 @@ export default async function ContactManagementPage() {
                   Google Maps Embed URL
                 </label>
                 <input 
+                  name="mapEmbedUrl"
                   type="text"
                   className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                   defaultValue={contactInfo.mapEmbedUrl}
@@ -102,6 +218,7 @@ export default async function ContactManagementPage() {
                       <FaFacebook className="text-gray-500" />
                     </div>
                     <input 
+                      name="facebook"
                       type="text"
                       className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                       defaultValue={contactInfo.socialMedia.facebook}
@@ -119,6 +236,7 @@ export default async function ContactManagementPage() {
                       <FaInstagram className="text-gray-500" />
                     </div>
                     <input 
+                      name="instagram"
                       type="text"
                       className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                       defaultValue={contactInfo.socialMedia.instagram}
@@ -130,9 +248,10 @@ export default async function ContactManagementPage() {
               <div className="pt-4">
                 <button 
                   type="submit"
-                  className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-md"
+                  disabled={saving}
+                  className={`bg-primary ${saving ? 'opacity-75' : 'hover:bg-primary-dark'} text-white px-4 py-2 rounded-md`}
                 >
-                  Değişiklikleri Kaydet
+                  {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
                 </button>
               </div>
             </form>

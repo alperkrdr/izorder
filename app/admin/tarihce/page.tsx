@@ -5,11 +5,6 @@ import { FaHistory, FaImage, FaCalendarAlt, FaUser, FaBuilding, FaUsers } from '
 import AdminLayout from '@/components/admin/AdminLayout';
 import { HistoryContent } from '@/types';
 
-export const metadata = {
-  title: 'Tarihçe Yönetimi - İzorder',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği Tarihçe Yönetimi',
-};
-
 export default function HistoryManagementPage() {
   const [historyContent, setHistoryContent] = useState<HistoryContent | null>(null);
   const [loading, setLoading] = useState(true);
