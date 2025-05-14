@@ -1,21 +1,144 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { FaHistory, FaImage, FaCalendarAlt, FaUser, FaBuilding, FaUsers } from 'react-icons/fa';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { getHistoryContent } from '@/lib/data';
-import { FaHistory, FaCalendarAlt, FaUser, FaBuilding, FaUsers, FaImage } from 'react-icons/fa';
+import { HistoryContent } from '@/types';
 
 export const metadata = {
   title: 'Tarihçe Yönetimi - İzorder',
   description: 'İzmir-Ordu Kültür ve Dayanışma Derneği Tarihçe Yönetimi',
 };
 
-export default async function HistoryManagementPage() {
-  const historyContent = await getHistoryContent();
-  
+export default function HistoryManagementPage() {
+  const [historyContent, setHistoryContent] = useState<HistoryContent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
+
+  useEffect(() => {
+    const fetchHistoryContent = async () => {
+      try {
+        const response = await fetch('/api/admin/history');
+        const data = await response.json();
+        if (data.success) {
+          setHistoryContent(data.data);
+        } else {
+          console.error('Veri alma hatası:', data.message);
+          setMessage({
+            text: 'Tarihçe içeriği alınamadı. Lütfen daha sonra tekrar deneyin.',
+            type: 'error'
+          });
+        }
+      } catch (error) {
+        console.error('Veri alma hatası:', error);
+        setMessage({
+          text: 'Tarihçe içeriği alınamadı. Lütfen daha sonra tekrar deneyin.',
+          type: 'error'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHistoryContent();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      // Form verilerini topla
+      const form = e.target as HTMLFormElement;
+      const formData = new FormData(form);
+      
+      // FormData'yı JSON'a dönüştür
+      const content = formData.get('content') as string;
+      const mainImageUrl = formData.get('mainImageUrl') as string;
+      const foundingDate = formData.get('foundingDate') as string;
+      const foundingPresident = formData.get('foundingPresident') as string;
+      const legalStatus = formData.get('legalStatus') as string;
+      const initialMemberCount = formData.get('initialMemberCount') as string;
+      const currentMemberCount = formData.get('currentMemberCount') as string;
+
+      // API'ye gönder
+      const response = await fetch('/api/admin/history', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content,
+          mainImageUrl,
+          foundingDate,
+          foundingPresident,
+          legalStatus,
+          initialMemberCount,
+          currentMemberCount,
+          // Mevcut milestone ve image verilerini koruyoruz
+          milestones: historyContent?.milestones || [],
+          additionalImages: historyContent?.additionalImages || []
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage({
+          text: 'Tarihçe içeriği başarıyla güncellendi.',
+          type: 'success'
+        });
+      } else {
+        setMessage({
+          text: `Hata: ${result.message}`,
+          type: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Kaydetme hatası:', error);
+      setMessage({
+        text: 'Bir hata oluştu. Lütfen daha sonra tekrar deneyin.',
+        type: 'error'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-gray-500">Yükleniyor...</div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (!historyContent) {
+    return (
+      <AdminLayout>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <p>Tarihçe içeriği yüklenemedi. Lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Tarihçe Yönetimi</h1>
         <p className="text-gray-600 mt-1">Dernek tarihçe içeriğini düzenleyebilirsiniz.</p>
       </div>
+      
+      {message && (
+        <div className={`mb-6 p-4 rounded ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {message.text}
+        </div>
+      )}
       
       <div className="bg-white shadow-md rounded-lg overflow-hidden mb-6">
         <div className="border-b border-gray-200 px-4 py-3 bg-gray-50">
@@ -25,12 +148,13 @@ export default async function HistoryManagementPage() {
           </h2>
         </div>
         <div className="p-6">
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 İçerik
               </label>
               <textarea
+                name="content"
                 rows={12}
                 className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                 defaultValue={historyContent.content}
@@ -50,6 +174,7 @@ export default async function HistoryManagementPage() {
                     <FaImage className="text-gray-500" />
                   </div>
                   <input 
+                    name="mainImageUrl"
                     type="text"
                     className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                     defaultValue={historyContent.mainImageUrl}
@@ -66,6 +191,7 @@ export default async function HistoryManagementPage() {
                     <FaCalendarAlt className="text-gray-500" />
                   </div>
                   <input 
+                    name="foundingDate"
                     type="text"
                     className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                     defaultValue={historyContent.foundingDate}
@@ -84,6 +210,7 @@ export default async function HistoryManagementPage() {
                     <FaUser className="text-gray-500" />
                   </div>
                   <input 
+                    name="foundingPresident"
                     type="text"
                     className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                     defaultValue={historyContent.foundingPresident}
@@ -100,6 +227,7 @@ export default async function HistoryManagementPage() {
                     <FaBuilding className="text-gray-500" />
                   </div>
                   <input 
+                    name="legalStatus"
                     type="text"
                     className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                     defaultValue={historyContent.legalStatus}
@@ -118,6 +246,7 @@ export default async function HistoryManagementPage() {
                     <FaUsers className="text-gray-500" />
                   </div>
                   <input 
+                    name="initialMemberCount"
                     type="text"
                     className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                     defaultValue={historyContent.initialMemberCount}
@@ -134,6 +263,7 @@ export default async function HistoryManagementPage() {
                     <FaUsers className="text-gray-500" />
                   </div>
                   <input 
+                    name="currentMemberCount"
                     type="text"
                     className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
                     defaultValue={historyContent.currentMemberCount}
@@ -145,9 +275,10 @@ export default async function HistoryManagementPage() {
             <div className="pt-4">
               <button 
                 type="submit"
-                className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-md"
+                disabled={saving}
+                className={`bg-primary ${saving ? 'opacity-75' : 'hover:bg-primary-dark'} text-white px-4 py-2 rounded-md`}
               >
-                Değişiklikleri Kaydet
+                {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
               </button>
             </div>
           </form>
