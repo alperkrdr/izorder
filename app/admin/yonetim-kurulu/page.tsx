@@ -1,14 +1,48 @@
+'use client';
+
 import AdminLayout from '@/components/admin/AdminLayout';
 import { getBoardMembers } from '@/lib/data';
 import Image from 'next/image';
+import { useState, useEffect } from 'react';
 
-export const metadata = {
-  title: 'Yönetim Kurulu Yönetimi - İzorder',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği Yönetim Kurulu Yönetimi',
-};
+interface BoardMember {
+  id: string;
+  name: string;
+  surname: string;
+  title: string;
+  imageUrl: string;
+  bio: string;
+  isFounder?: boolean;
+}
 
-export default async function BoardMembersPage() {
-  const boardMembers = await getBoardMembers();
+export default function BoardMembersPage() {
+  const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBoardMembers = async () => {
+      try {
+        const members = await getBoardMembers();
+        setBoardMembers(members);
+      } catch (error) {
+        console.error('Error fetching board members:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBoardMembers();
+  }, []);
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-gray-500">Yükleniyor...</div>
+        </div>
+      </AdminLayout>
+    );
+  }
   
   return (
     <AdminLayout>

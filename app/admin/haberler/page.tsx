@@ -1,15 +1,40 @@
+'use client';
+
 import AdminLayout from '@/components/admin/AdminLayout';
 import NewsTable from '@/components/admin/NewsTable';
 import { getAllNews } from '@/lib/data';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { NewsItem } from '@/types';
 
-export const metadata = {
-  title: 'Haber Yönetimi - İzorder',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği Haber Yönetimi',
-};
+export default function NewsManagement() {
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default async function NewsManagement() {
-  const news = await getAllNews();
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const newsData = await getAllNews();
+        setNews(newsData);
+      } catch (error) {
+        console.error('Error fetching news:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNews();
+  }, []);
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-gray-500">Yükleniyor...</div>
+        </div>
+      </AdminLayout>
+    );
+  }
   
   return (
     <AdminLayout>

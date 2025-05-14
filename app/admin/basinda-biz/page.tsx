@@ -1,15 +1,49 @@
+'use client';
+
 import AdminLayout from '@/components/admin/AdminLayout';
 import { getPressCoverage } from '@/lib/data';
 import { FaExternalLinkAlt } from 'react-icons/fa';
 import Image from 'next/image';
+import { useState, useEffect } from 'react';
 
-export const metadata = {
-  title: 'Basında Biz Yönetimi - İzorder',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği Basında Biz Yönetimi',
-};
+interface PressItem {
+  id: string;
+  title: string;
+  summary: string;
+  source: string;
+  date: string;
+  imageUrl: string;
+  externalUrl?: string;
+}
 
-export default async function PressCoveragePage() {
-  const pressItems = await getPressCoverage();
+export default function PressCoveragePage() {
+  const [pressItems, setPressItems] = useState<PressItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPressItems = async () => {
+      try {
+        const items = await getPressCoverage();
+        setPressItems(items);
+      } catch (error) {
+        console.error('Error fetching press items:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPressItems();
+  }, []);
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-gray-500">Yükleniyor...</div>
+        </div>
+      </AdminLayout>
+    );
+  }
   
   return (
     <AdminLayout>

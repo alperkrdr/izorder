@@ -1,15 +1,40 @@
+'use client';
+
 import AdminLayout from '@/components/admin/AdminLayout';
 import { getAllGalleryImages } from '@/lib/data';
 import Image from 'next/image';
 import { FaTrash, FaEdit, FaEye } from 'react-icons/fa';
+import { useState, useEffect } from 'react';
+import { GalleryImage } from '@/types';
 
-export const metadata = {
-  title: 'Galeri Yönetimi - İzorder',
-  description: 'İzmir-Ordu Kültür ve Dayanışma Derneği Galeri Yönetimi',
-};
+export default function GalleryManagementPage() {
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default async function GalleryManagementPage() {
-  const galleryImages = await getAllGalleryImages();
+  useEffect(() => {
+    const fetchGalleryImages = async () => {
+      try {
+        const images = await getAllGalleryImages();
+        setGalleryImages(images);
+      } catch (error) {
+        console.error('Error fetching gallery images:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGalleryImages();
+  }, []);
+  
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-gray-500">Yükleniyor...</div>
+        </div>
+      </AdminLayout>
+    );
+  }
   
   return (
     <AdminLayout>
