@@ -37,3 +37,5 @@ next-env.d.ts
 *.zip
 .next.zip
 next-build.zip
+.next/**/*.zip
+out/**/*.zip
