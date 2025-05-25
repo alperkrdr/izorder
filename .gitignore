@@ -33,6 +33,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Firebase credentials and service account keys
+firebase-credentials.json
+serviceAccountKey.json
+scripts/serviceAccountKey.json
+scripts/izorder-92337-firebase-adminsdk-fbsvc-*.json
+scripts/*firebase-adminsdk*.json
+*-firebase-adminsdk-*.json
+
 # large files
 *.zip
 .next.zip
