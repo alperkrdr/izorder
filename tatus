@@ -1,0 +1,10 @@
+[33md8b0151[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Add GitHub Pages deployment workflow and update guides
+[33m186d064[m SECURITY: Remove Firebase service account keys and update .gitignore
+[33m6300edc[m Add deployment configuration for Vercel, Netlify, and GitHub Pages
+[33mb2a1f5e[m Major Firebase integration and admin system overhaul
+[33me98101e[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m İletişim ve tarihçe sayfalarına metadata eklendi ve sayfa içerikleri güncellendi
+[33mfcac694[m Add fallback to mock data for API requests in admin panels
+[33m025df56[m Fix admin panel API calls with better error handling and logging
+[33mb70f83f[m Fix metadata exports in client components - separate metadata.ts files for admin pages
+[33m608f404[m İletişim ve tarihçe sayfalarına metadata eklendi ve sayfa içerikleri güncellendi
+[33mbec638a[m Update .gitignore for better large file handling

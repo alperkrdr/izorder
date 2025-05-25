@@ -10,6 +10,7 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'İzorder - İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği',
   description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği (İzorder) resmi web sitesi',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://izorder.github.io'),
 };
 
 export default function RootLayout({

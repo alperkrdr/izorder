@@ -1,6 +1,6 @@
 import AdminLayout from '@/components/admin/AdminLayout';
 import NewsForm from '@/components/admin/NewsForm';
-import { getNewsById } from '@/utils/firebase/firestore';
+import { getNewsById } from '@/utils/firebase/dataService';
 import { notFound } from 'next/navigation';
 
 interface EditNewsPageProps {

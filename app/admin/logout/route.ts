@@ -1,14 +1,11 @@
-import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // Client-side Firebase auth logout'u handle edilecek
+    // Server-side'da sadece redirect yapıyoruz
     
-    // Kullanıcı çıkışı yap
-    await supabase.auth.signOut()
-    
-    return NextResponse.redirect(new URL('/admin/login', 'http://localhost:3000'))
+    return NextResponse.redirect(new URL('/admin/login', request.url))
   } catch (error) {
     console.error('Logout error:', error)
     return NextResponse.json(
@@ -16,4 +13,4 @@ export async function POST() {
       { status: 500 }
     )
   }
-} 
+}

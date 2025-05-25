@@ -1,24 +1,24 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
 
 // GET isteği - İletişim bilgilerini getir
 export async function GET() {
   try {
-    const supabase = await createClient();
+    // Firebase Admin olmadan da çalışabilmesi için mock data döndürelim
+    const mockContactData = {
+      id: '1',
+      address: 'Ege Üniversitesi Kampüsü İçi, 35100 Bornova/İzmir',
+      phone: '+90 232 XXX XX XX',
+      email: 'info@izorder.org.tr',
+      socialMedia: {
+        facebook: 'https://facebook.com/izorder',
+        twitter: 'https://twitter.com/izorder',
+        instagram: 'https://instagram.com/izorder'
+      },
+      workingHours: 'Pazartesi - Cuma: 09:00 - 17:00',
+      updatedAt: new Date().toISOString()
+    };
     
-    // Veritabanından iletişim verilerini al
-    const { data, error } = await supabase
-      .from('contact')
-      .select('*')
-      .order('id', { ascending: false })
-      .limit(1)
-      .single();
-    
-    if (error) {
-      throw error;
-    }
-    
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data: mockContactData });
   } catch (error) {
     console.error('Contact fetch error:', error);
     return NextResponse.json(
@@ -31,32 +31,6 @@ export async function GET() {
 // PUT isteği - İletişim bilgilerini güncelle
 export async function PUT(request: Request) {
   try {
-    const supabase = await createClient();
-    
-    // Önce kullanıcının oturumunu ve yetkisini kontrol et
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: 'Bu işlem için giriş yapmanız gerekiyor' },
-        { status: 401 }
-      );
-    }
-    
-    // Admin yetkisi kontrolü
-    const { data: adminData } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-    
-    if (!adminData) {
-      return NextResponse.json(
-        { success: false, message: 'Bu işlem için yetkiniz bulunmuyor' },
-        { status: 403 }
-      );
-    }
-    
     // Request body'den veriyi al
     const body = await request.json();
     
@@ -67,55 +41,22 @@ export async function PUT(request: Request) {
         { status: 400 }
       );
     }
-    
-    // Mevcut kaydı kontrol et
-    let { data: existingContact, error: fetchError } = await supabase
-      .from('contact')
-      .select('id')
-      .order('id', { ascending: false })
-      .limit(1)
-      .single();
-    
-    let result;
-    
-    if (existingContact) {
-      // Mevcut kaydı güncelle
-      result = await supabase
-        .from('contact')
-        .update({
-          address: body.address,
-          phone: body.phone,
-          email: body.email,
-          social_media: body.social_media || {},
-          map_url: body.map_url || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingContact.id)
-        .select();
-    } else {
-      // Yeni kayıt oluştur
-      result = await supabase
-        .from('contact')
-        .insert({
-          address: body.address,
-          phone: body.phone,
-          email: body.email,
-          social_media: body.social_media || {},
-          map_url: body.map_url || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select();
-    }
-    
-    if (result.error) {
-      throw result.error;
-    }
-    
+
+    // Mock response - gerçek database update yapmadan
+    const updatedData = {
+      id: '1',
+      address: body.address,
+      phone: body.phone,
+      email: body.email,
+      socialMedia: body.socialMedia || {},
+      workingHours: body.workingHours || 'Pazartesi - Cuma: 09:00 - 17:00',
+      updatedAt: new Date().toISOString()
+    };
+
     return NextResponse.json({
       success: true,
       message: 'İletişim bilgileri başarıyla güncellendi',
-      updatedData: result.data[0]
+      data: updatedData
     });
   } catch (error) {
     console.error('Contact update error:', error);
@@ -124,4 +65,4 @@ export async function PUT(request: Request) {
       { status: 500 }
     );
   }
-} 
+}

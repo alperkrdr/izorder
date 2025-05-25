@@ -16,10 +16,21 @@ export async function updateSession(request: NextRequest) {
 
     if (!sessionCookie) {
       return response;
-    }
-
-    // Firebase ile session doğrulama
+    }    // Firebase ile session doğrulama
     try {
+      // adminAuth kontrolü
+      if (!adminAuth) {
+        console.error('Firebase Admin Auth not initialized');
+        // Session geçersiz ise cookie'yi sil
+        response.cookies.set({
+          name: 'session',
+          value: '',
+          maxAge: 0,
+          path: '/',
+        });
+        return response;
+      }
+      
       // Session cookie ile kullanıcı bilgilerini doğrula
       await adminAuth.verifySessionCookie(sessionCookie, true);
       // Session geçerli ise response döndür

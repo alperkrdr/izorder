@@ -17,10 +17,10 @@ const navigation = [
 ];
 
 export default function Header() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);  const pathname = usePathname();
 
   const isActive = (href: string) => {
+    if (!pathname) return false;
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
   };

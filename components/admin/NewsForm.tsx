@@ -15,7 +15,7 @@ interface NewsFormProps {
     imageUrl: string;
     date: string;
     slug: string;
-    author: string;
+    author?: string;
   };
   isEditing?: boolean;
 }

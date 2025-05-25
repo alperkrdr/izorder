@@ -1,12 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/utils/firebase/admin';
-import { cookies } from 'next/headers';
+
+// Force dynamic rendering for API routes that use authentication
+export const dynamic = 'force-dynamic';
 
 // GET isteği - Tarihçe verilerini getir
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Session cookie kontrolü
-    const sessionCookie = cookies().get('session')?.value;
+    const sessionCookie = request.cookies.get('session')?.value;
     
     if (!sessionCookie) {
       return NextResponse.json(
@@ -14,9 +16,15 @@ export async function GET() {
         { status: 401 }
       );
     }
-    
-    try {
+      try {
       // Firebase ile session doğrulama
+      if (!adminAuth) {
+        return NextResponse.json(
+          { success: false, message: 'Firebase Auth yapılandırması bulunamadı' },
+          { status: 500 }
+        );
+      }
+      
       const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true);
       const userId = decodedClaims.uid;
       
@@ -26,8 +34,14 @@ export async function GET() {
           { status: 401 }
         );
       }
+        // Firestore'dan tarihçe verilerini al
+      if (!adminDb) {
+        return NextResponse.json(
+          { success: false, message: 'Firebase Database yapılandırması bulunamadı' },
+          { status: 500 }
+        );
+      }
       
-      // Firestore'dan tarihçe verilerini al
       const historyRef = adminDb.collection('history_content').doc('main');
       const doc = await historyRef.get();
       
@@ -66,10 +80,10 @@ export async function GET() {
 }
 
 // PUT isteği - Tarihçe verilerini güncelle
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
   try {
     // Session cookie kontrolü
-    const sessionCookie = cookies().get('session')?.value;
+    const sessionCookie = request.cookies.get('session')?.value;
     
     if (!sessionCookie) {
       return NextResponse.json(
@@ -77,9 +91,15 @@ export async function PUT(request: Request) {
         { status: 401 }
       );
     }
-    
-    try {
+      try {
       // Firebase ile session doğrulama
+      if (!adminAuth) {
+        return NextResponse.json(
+          { success: false, message: 'Firebase Auth yapılandırması bulunamadı' },
+          { status: 500 }
+        );
+      }
+      
       const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true);
       const userId = decodedClaims.uid;
       
@@ -91,6 +111,13 @@ export async function PUT(request: Request) {
       }
       
       // Admin yetkisi kontrolü
+      if (!adminDb) {
+        return NextResponse.json(
+          { success: false, message: 'Firebase Database yapılandırması bulunamadı' },
+          { status: 500 }
+        );
+      }
+      
       const adminRef = adminDb.collection('admin_users').doc(userId);
       const adminDoc = await adminRef.get();
       
@@ -111,8 +138,7 @@ export async function PUT(request: Request) {
           { status: 400 }
         );
       }
-      
-      // Tarihçe verisini güncelle
+        // Tarihçe verisini güncelle
       const historyRef = adminDb.collection('history_content').doc('main');
       
       // Güncellenecek veriyi hazırla

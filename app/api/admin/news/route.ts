@@ -1,22 +1,30 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/utils/firebase/admin';
-import { cookies } from 'next/headers';
+
+// Force dynamic rendering for API routes that use authentication
+export const dynamic = 'force-dynamic';
 
 // GET isteği - Haberleri getir
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Session cookie kontrolü
-    const sessionCookie = cookies().get('session')?.value;
+    const sessionCookie = request.cookies.get('session')?.value;
     
     if (!sessionCookie) {
       return NextResponse.json(
         { success: false, message: 'Oturum bulunamadı' },
         { status: 401 }
-      );
-    }
+      );    }
     
     try {
       // Firebase ile session doğrulama
+      if (!adminAuth) {
+        return NextResponse.json(
+          { success: false, message: 'Firebase Auth yapılandırması bulunamadı' },
+          { status: 500 }
+        );
+      }
+      
       const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true);
       const userId = decodedClaims.uid;
       
@@ -28,6 +36,13 @@ export async function GET() {
       }
       
       // Firestore'dan haberleri getir
+      if (!adminDb) {
+        return NextResponse.json(
+          { success: false, message: 'Firebase Database yapılandırması bulunamadı' },
+          { status: 500 }
+        );
+      }
+      
       const newsRef = adminDb.collection('news');
       const snapshot = await newsRef.orderBy('date', 'desc').get();
       
@@ -54,10 +69,10 @@ export async function GET() {
 }
 
 // PUT isteği - Haber güncelle
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
   try {
     // Session cookie kontrolü
-    const sessionCookie = cookies().get('session')?.value;
+    const sessionCookie = request.cookies.get('session')?.value;
     
     if (!sessionCookie) {
       return NextResponse.json(
@@ -68,6 +83,13 @@ export async function PUT(request: Request) {
     
     try {
       // Firebase ile session doğrulama
+      if (!adminAuth) {
+        return NextResponse.json(
+          { success: false, message: 'Firebase Auth yapılandırması bulunamadı' },
+          { status: 500 }
+        );
+      }
+      
       const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true);
       const userId = decodedClaims.uid;
       
@@ -79,6 +101,13 @@ export async function PUT(request: Request) {
       }
       
       // Admin yetkisi kontrolü
+      if (!adminDb) {
+        return NextResponse.json(
+          { success: false, message: 'Firebase Database yapılandırması bulunamadı' },
+          { status: 500 }
+        );
+      }
+      
       const adminRef = adminDb.collection('admin_users').doc(userId);
       const adminDoc = await adminRef.get();
       
@@ -165,7 +194,7 @@ export async function PUT(request: Request) {
 }
 
 // DELETE isteği - Haber sil
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   try {
     // URL'den ID parametresini al
     const url = new URL(request.url);
@@ -179,7 +208,7 @@ export async function DELETE(request: Request) {
     }
     
     // Session cookie kontrolü
-    const sessionCookie = cookies().get('session')?.value;
+    const sessionCookie = request.cookies.get('session')?.value;
     
     if (!sessionCookie) {
       return NextResponse.json(
@@ -187,9 +216,15 @@ export async function DELETE(request: Request) {
         { status: 401 }
       );
     }
-    
-    try {
+      try {
       // Firebase ile session doğrulama
+      if (!adminAuth) {
+        return NextResponse.json(
+          { success: false, message: 'Firebase Auth yapılandırması bulunamadı' },
+          { status: 500 }
+        );
+      }
+      
       const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true);
       const userId = decodedClaims.uid;
       
@@ -201,6 +236,13 @@ export async function DELETE(request: Request) {
       }
       
       // Admin yetkisi kontrolü
+      if (!adminDb) {
+        return NextResponse.json(
+          { success: false, message: 'Firebase Database yapılandırması bulunamadı' },
+          { status: 500 }
+        );
+      }
+      
       const adminRef = adminDb.collection('admin_users').doc(userId);
       const adminDoc = await adminRef.get();
       

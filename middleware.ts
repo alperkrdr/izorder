@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Explicitly set the runtime to experimental-edge
-export const runtime = 'experimental-edge';
-
-// Admin sayfaları için kimlik doğrulama middleware'i - Edge Runtime için optimize edilmiş
+// Admin sayfaları için kimlik doğrulama middleware'i
 export async function middleware(request: NextRequest) {
   // Middleware'i devre dışı bırakıyoruz - her zaman devam et
   return NextResponse.next();

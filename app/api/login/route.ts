@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/utils/firebase/admin';
-import { cookies } from 'next/headers';
+
+// Force dynamic rendering for API routes that use authentication
+export const dynamic = 'force-dynamic';
 
 // Firebase session cookie expiration (in seconds)
 const SESSION_EXPIRATION = 60 * 60 * 24 * 7; // 7 days
@@ -8,28 +10,35 @@ const SESSION_EXPIRATION = 60 * 60 * 24 * 7; // 7 days
 export async function POST(request: NextRequest) {
   try {
     const { idToken } = await request.json();
-    
-    if (!idToken) {
+      if (!idToken) {
       return NextResponse.json(
         { error: 'idToken is required' },
         { status: 400 }
       );
     }
     
-    // Create a session cookie
+    // Check if adminAuth is configured
+    if (!adminAuth) {
+      return NextResponse.json(
+        { error: 'Firebase Admin Auth not configured' },
+        { status: 500 }
+      );
+    }
+      // Create a session cookie
     const sessionCookie = await adminAuth.createSessionCookie(idToken, {
       expiresIn: SESSION_EXPIRATION * 1000, // Convert to milliseconds
     });
     
-    // Set the cookie
-    cookies().set('session', sessionCookie, {
+    // Create response and set the cookie
+    const response = NextResponse.json({ success: true });
+    response.cookies.set('session', sessionCookie, {
       maxAge: SESSION_EXPIRATION,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       path: '/',
     });
     
-    return NextResponse.json({ success: true });
+    return response;
   } catch (error) {
     console.error('Error creating session:', error);
     return NextResponse.json(

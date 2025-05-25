@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminStorage } from '@/utils/firebase/admin';
-import { cookies } from 'next/headers';
+
+// Force dynamic rendering for API routes that use authentication
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check session
-    const sessionCookie = cookies().get('session')?.value;
+    const sessionCookie = request.cookies.get('session')?.value;
     if (!sessionCookie) {
       return NextResponse.json(
         { error: 'Unauthorized - No session' },
