@@ -9,6 +9,11 @@ interface EditNewsPageProps {
   };
 }
 
+export async function generateStaticParams() {
+  // Static export için boş dizi döndür
+  return [];
+}
+
 export async function generateMetadata({ params }: EditNewsPageProps) {
   return {
     title: 'Haber Düzenle - İzorder',

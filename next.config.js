@@ -1,7 +1,14 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {  reactStrictMode: true,
-  // output: 'export', // Admin sayfalarında dinamik işlevselliği etkinleştirmek için statik export'u kaldırdık
+const isGitHubPages = process.env.DEPLOYMENT_TARGET === 'github-pages';
+
+const nextConfig = {
+  reactStrictMode: true,
+  // GitHub Pages için static export, Vercel için varsayılan
+  output: isGitHubPages ? 'export' : undefined,
+  trailingSlash: isGitHubPages, // GitHub Pages için trailing slash
+  distDir: isGitHubPages ? 'out' : '.next', // Output klasörü adı
   images: {
+    unoptimized: isGitHubPages, // Static export için gerekli
     domains: [
       'firebasestorage.googleapis.com', // Firebase Storage resimlerine erişim için
       'storage.googleapis.com', // Yeni Firebase Storage bucket format için
@@ -44,11 +51,12 @@ const nextConfig = {  reactStrictMode: true,
       'node:assert': 'commonjs assert',
       'node:os': 'commonjs os',
       'node:constants': 'commonjs constants',
-      'node:querystring': 'commonjs querystring',
-    });
-    
+      'node:querystring': 'commonjs querystring',    });    
     return config;
-  }
+  },
+  // GitHub Pages için base path ayarla, Vercel için yok
+  basePath: isGitHubPages && process.env.NODE_ENV === 'production' ? '/izorder' : '',
+  assetPrefix: isGitHubPages && process.env.NODE_ENV === 'production' ? '/izorder/' : ''
 };
 
 module.exports = nextConfig;

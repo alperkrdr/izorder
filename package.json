@@ -1,14 +1,23 @@
 {
   "name": "izorder",
   "version": "0.1.0",
-  "private": true,  "scripts": {
+  "private": true,
+  "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "init-firebase": "node scripts/init-firebase-data.js",
-    "export": "next build && next export",
-    "deploy": "npm run build"
+    "export": "cross-env DEPLOYMENT_TARGET=github-pages next build",
+    "build:vercel": "next build",
+    "build:github": "cross-env DEPLOYMENT_TARGET=github-pages next build",
+    "build:test": "npm run lint && npm run build:vercel",
+    "deploy": "npm run build",
+    "deploy:vercel": "vercel --prod",
+    "deploy:github": "npm run build:github",
+    "preview:vercel": "vercel",
+    "logs:vercel": "vercel logs",
+    "status:vercel": "vercel"
   },
   "dependencies": {
     "autoprefixer": "^10.4.16",
@@ -36,6 +45,7 @@
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
     "@types/react-slick": "^0.23.13",
+    "cross-env": "^7.0.3",
     "eslint": "^8.56.0",
     "eslint-config-next": "^14.0.4"
   }
