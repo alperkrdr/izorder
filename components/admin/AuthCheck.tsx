@@ -2,48 +2,62 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/utils/firebase/client';
 
 interface AuthCheckProps {
   children: React.ReactNode;
 }
 
-// 5 dakika için milisaniye
-const SESSION_TIMEOUT = 5 * 60 * 1000;
+// 10 dakika için milisaniye - otomatik oturum sonu
+const SESSION_TIMEOUT = 10 * 60 * 1000;
 
 export default function AuthCheck({ children }: AuthCheckProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    // Check if the admin is authenticated
-    const authToken = sessionStorage.getItem('izorder_admin_auth');
-    const lastActivity = sessionStorage.getItem('izorder_last_activity');
-    
-    const now = Date.now();
-    let isSessionValid = false;
-
-    if (authToken === 'true' && lastActivity) {
-      const timeSinceLastActivity = now - parseInt(lastActivity, 10);
-      isSessionValid = timeSinceLastActivity < SESSION_TIMEOUT;
-    }
-    
-    if (!authToken || !isSessionValid) {
-      // Oturumu temizle ve login sayfasına yönlendir
-      sessionStorage.removeItem('izorder_admin_auth');
-      sessionStorage.removeItem('izorder_last_activity');
-      router.push('/admin/login');
-    } else {
-      // Oturum geçerli, aktivite zamanını güncelle
-      sessionStorage.setItem('izorder_last_activity', now.toString());
-      setIsAuthenticated(true);
-    }
-    
-    setIsLoading(false);
+    // Firebase Auth state değişikliklerini dinle
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log('Firebase Auth state changed:', currentUser?.email);
+      
+      if (currentUser) {
+        // Kullanıcı giriş yapmış
+        setUser(currentUser);
+        setIsAuthenticated(true);
+        
+        // SessionStorage'a backup olarak kaydet
+        sessionStorage.setItem('izorder_admin_auth', 'true');
+        sessionStorage.setItem('izorder_last_activity', Date.now().toString());
+        
+        console.log('User authenticated:', {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          emailVerified: currentUser.emailVerified
+        });
+      } else {
+        // Kullanıcı giriş yapmamış
+        setUser(null);
+        setIsAuthenticated(false);
+        
+        // SessionStorage'ı temizle
+        sessionStorage.removeItem('izorder_admin_auth');
+        sessionStorage.removeItem('izorder_last_activity');
+        
+        console.log('User not authenticated, redirecting to login');
+        router.push('/admin/login');
+      }
+      
+      setIsLoading(false);
+    });
 
     // Aktivite dinleyicilerini ekle
     const updateLastActivity = () => {
-      sessionStorage.setItem('izorder_last_activity', Date.now().toString());
+      if (auth.currentUser) {
+        sessionStorage.setItem('izorder_last_activity', Date.now().toString());
+      }
     };
 
     // Kullanıcı etkileşimlerini dinle
@@ -52,24 +66,23 @@ export default function AuthCheck({ children }: AuthCheckProps) {
     window.addEventListener('scroll', updateLastActivity);
     window.addEventListener('mousemove', updateLastActivity);
 
-    // Düzenli kontrol için zamanlayıcı
+    // Düzenli kontrol için zamanlayıcı - Firebase Auth ile ek güvenlik
     const checkInterval = setInterval(() => {
       const lastActivity = sessionStorage.getItem('izorder_last_activity');
-      if (lastActivity) {
+      if (lastActivity && auth.currentUser) {
         const timeSinceLastActivity = Date.now() - parseInt(lastActivity, 10);
         
         if (timeSinceLastActivity >= SESSION_TIMEOUT) {
-          // Oturum süresi doldu
-          sessionStorage.removeItem('izorder_admin_auth');
-          sessionStorage.removeItem('izorder_last_activity');
-          router.push('/admin/login');
-          clearInterval(checkInterval);
+          // Oturum süresi doldu - Firebase'den çıkış yap
+          console.log('Session timeout, signing out');
+          auth.signOut();
         }
       }
     }, 60000); // Her dakika kontrol et
 
     return () => {
       // Temizleme işlemleri
+      unsubscribe();
       window.removeEventListener('click', updateLastActivity);
       window.removeEventListener('keypress', updateLastActivity);
       window.removeEventListener('scroll', updateLastActivity);
@@ -86,9 +99,9 @@ export default function AuthCheck({ children }: AuthCheckProps) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     return null; // Will redirect in useEffect
   }
 
   return <>{children}</>;
-} 
+}

@@ -1,150 +1,139 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import AdminLayout from '@/components/admin/AdminLayout';
-import { FaMapMarkerAlt, FaPhone, FaEnvelope, FaFacebook, FaInstagram, FaUserPlus } from 'react-icons/fa';
-import { ContactInfo } from '@/types';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/utils/firebase/client';
+import { FaMapMarkerAlt, FaPhone, FaEnvelope, FaFacebook, FaInstagram, FaUserPlus, FaSave } from 'react-icons/fa';
+
+// Contact info type
+interface ContactInfo {
+  address: string;
+  phone: string;
+  email: string;
+  mapEmbedUrl: string;
+  workingHours: string;
+  socialMedia: {
+    facebook?: string;
+    twitter?: string;
+    instagram?: string;
+  };
+}
 
 export default function ContactManagementPage() {
-  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
+  const [contactInfo, setContactInfo] = useState<ContactInfo>({
+    address: '',
+    phone: '',
+    email: '',
+    mapEmbedUrl: '',
+    workingHours: '',
+    socialMedia: {
+      facebook: '',
+      instagram: '',
+    }
+  });
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
-
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  
+  // Fetch contact info
   useEffect(() => {
     const fetchContactInfo = async () => {
       try {
-        console.log('Fetching contact information...');
-        const response = await fetch('/api/admin/contact');
+        setLoading(true);
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
+        // Get the contact info document from Firestore
+        const contactRef = doc(db, 'contact_info', 'main');
+        const contactDoc = await getDoc(contactRef);
+        
+        if (contactDoc.exists()) {
+          setContactInfo(contactDoc.data() as ContactInfo);
         }
-        
-        const data = await response.json();
-        console.log('Received contact data:', data);
-        
-        if (data.success) {
-          setContactInfo(data.data);
-        } else {
-          throw new Error(data.message || 'Veri alınamadı');
-        }
-      } catch (error) {
-        console.error('Veri alma hatası:', error);
-        setMessage({
-          text: `İletişim bilgileri alınamadı: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
-          type: 'error'
-        });
+      } catch (error: any) {
+        console.error('Error fetching contact info:', error);
+        setError('İletişim bilgileri yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.');
       } finally {
         setLoading(false);
       }
     };
-
+    
     fetchContactInfo();
   }, []);
-
+  
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    setMessage(null);
-
+    
     try {
-      console.log('Submitting contact form...');
-      const form = e.target as HTMLFormElement;
-      const formData = new FormData(form);
+      setSaving(true);
+      setError(null);
       
-      const address = formData.get('address') as string;
-      const phone = formData.get('phone') as string;
-      const email = formData.get('email') as string;
-      const mapEmbedUrl = formData.get('mapEmbedUrl') as string;
-      const facebook = formData.get('facebook') as string;
-      const instagram = formData.get('instagram') as string;
-
-      const dataToSend = {
-        address,
-        phone,
-        email,
-        mapEmbedUrl,
-        socialMedia: {
-          facebook,
-          instagram
-        }
-      };
+      // Save to Firestore
+      const contactRef = doc(db, 'contact_info', 'main');
+      await setDoc(contactRef, {
+        ...contactInfo,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
       
-      console.log('Sending contact data:', dataToSend);
-
-      const response = await fetch('/api/admin/contact', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dataToSend),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Received result:', result);
-
-      if (result.success) {
-        setMessage({
-          text: 'İletişim bilgileri başarıyla güncellendi.',
-          type: 'success'
-        });
-        
-        // Güncel veriyi state'e yükle
-        if (result.updatedData) {
-          setContactInfo(result.updatedData);
-        }
-      } else {
-        setMessage({
-          text: `Hata: ${result.message}`,
-          type: 'error'
-        });
-      }
-    } catch (error) {
-      console.error('Kaydetme hatası:', error);
-      setMessage({
-        text: `Bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
-        type: 'error'
-      });
+      setSuccess('İletişim bilgileri başarıyla kaydedildi.');
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error: any) {
+      console.error('Error saving contact info:', error);
+      setError('İletişim bilgileri kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.');
     } finally {
       setSaving(false);
     }
   };
-
+  
+  // Handle input changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    // Handle nested social media properties
+    if (name.startsWith('socialMedia.')) {
+      const socialMediaProp = name.split('.')[1];
+      setContactInfo(prev => ({
+        ...prev,
+        socialMedia: {
+          ...prev.socialMedia,
+          [socialMediaProp]: value
+        }
+      }));
+    } else {
+      setContactInfo(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+  
   if (loading) {
     return (
-      <AdminLayout>
-        <div className="flex justify-center items-center h-64">
-          <div className="text-gray-500">Yükleniyor...</div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  if (!contactInfo) {
-    return (
-      <AdminLayout>
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          <p>İletişim bilgileri yüklenemedi. Lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.</p>
-        </div>
-      </AdminLayout>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
     );
   }
   
   return (
-    <AdminLayout>
+    <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">İletişim Bilgileri Yönetimi</h1>
+        <h1 className="text-2xl font-semibold">İletişim Bilgileri Yönetimi</h1>
         <p className="text-gray-600 mt-1">Dernek iletişim bilgilerini düzenleyebilirsiniz.</p>
       </div>
-
-      {message && (
-        <div className={`mb-6 p-4 rounded ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          {message.text}
+      
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-6">
+          <p className="text-red-700">{error}</p>
+        </div>
+      )}
+      
+      {success && (
+        <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded mb-6">
+          <p className="text-green-700">{success}</p>
         </div>
       )}
 
@@ -168,8 +157,9 @@ export default function ContactManagementPage() {
                   <textarea 
                     name="address"
                     rows={3}
-                    className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                    defaultValue={contactInfo.address}
+                    className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    value={contactInfo.address}
+                    onChange={handleChange}
                   ></textarea>
                 </div>
               </div>
@@ -184,10 +174,11 @@ export default function ContactManagementPage() {
                     <FaPhone className="text-gray-500" />
                   </div>
                   <input 
-                    name="phone"
                     type="text"
-                    className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                    defaultValue={contactInfo.phone}
+                    name="phone"
+                    className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    value={contactInfo.phone}
+                    onChange={handleChange}
                   />
                 </div>
               </div>
@@ -202,12 +193,28 @@ export default function ContactManagementPage() {
                     <FaEnvelope className="text-gray-500" />
                   </div>
                   <input 
-                    name="email"
                     type="email"
-                    className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                    defaultValue={contactInfo.email}
+                    name="email"
+                    className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    value={contactInfo.email}
+                    onChange={handleChange}
                   />
                 </div>
+              </div>
+              
+              {/* Çalışma Saatleri */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Çalışma Saatleri
+                </label>
+                <input 
+                  type="text"
+                  name="workingHours"
+                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={contactInfo.workingHours}
+                  onChange={handleChange}
+                  placeholder="Örn: Pazartesi - Cuma: 09:00 - 17:00"
+                />
               </div>
               
               {/* Google Maps Embed URL */}
@@ -216,10 +223,11 @@ export default function ContactManagementPage() {
                   Google Maps Embed URL
                 </label>
                 <input 
-                  name="mapEmbedUrl"
                   type="text"
-                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                  defaultValue={contactInfo.mapEmbedUrl}
+                  name="mapEmbedUrl"
+                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={contactInfo.mapEmbedUrl}
+                  onChange={handleChange}
                 />
                 <p className="mt-1 text-xs text-gray-500">
                   Google Maps embed kodunun src kısmındaki URL'i buraya yapıştırın.
@@ -237,10 +245,11 @@ export default function ContactManagementPage() {
                       <FaFacebook className="text-gray-500" />
                     </div>
                     <input 
-                      name="facebook"
                       type="text"
-                      className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                      defaultValue={contactInfo.socialMedia.facebook}
+                      name="socialMedia.facebook"
+                      className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      value={contactInfo.socialMedia.facebook || ''}
+                      onChange={handleChange}
                     />
                   </div>
                 </div>
@@ -255,10 +264,11 @@ export default function ContactManagementPage() {
                       <FaInstagram className="text-gray-500" />
                     </div>
                     <input 
-                      name="instagram"
                       type="text"
-                      className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                      defaultValue={contactInfo.socialMedia.instagram}
+                      name="socialMedia.instagram"
+                      className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      value={contactInfo.socialMedia.instagram || ''}
+                      onChange={handleChange}
                     />
                   </div>
                 </div>
@@ -268,164 +278,16 @@ export default function ContactManagementPage() {
                 <button 
                   type="submit"
                   disabled={saving}
-                  className={`bg-primary ${saving ? 'opacity-75' : 'hover:bg-primary-dark'} text-white px-4 py-2 rounded-md`}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center"
                 >
+                  <FaSave className="mr-2" />
                   {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
                 </button>
               </div>
             </form>
           </div>
         </div>
-
-        {/* Üyelik Formu Ayarları */}
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
-          <div className="border-b border-gray-200 px-4 py-3 bg-gray-50">
-            <h2 className="text-lg font-medium text-gray-800">Üyelik Formu Ayarları</h2>
-          </div>
-          <div className="p-6">
-            <form className="space-y-6">
-              {/* Form Başlığı */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Form Başlığı
-                </label>
-                <input 
-                  type="text"
-                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                  defaultValue="Üyelik Başvuru Formu"
-                />
-              </div>
-
-              {/* Form Açıklaması */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Form Açıklaması
-                </label>
-                <textarea 
-                  rows={3}
-                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                  defaultValue="İzmir-Ordu Kültür ve Dayanışma Derneği'ne üyelik başvurusu yapmak için lütfen aşağıdaki formu doldurunuz."
-                ></textarea>
-              </div>
-              
-              {/* E-posta Bildirimi */}
-              <div className="flex items-start">
-                <div className="flex items-center h-5">
-                  <input
-                    id="notifications"
-                    name="notifications"
-                    type="checkbox"
-                    defaultChecked={true}
-                    className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded"
-                  />
-                </div>
-                <div className="ml-3 text-sm">
-                  <label htmlFor="notifications" className="font-medium text-gray-700">E-posta bildirimleri</label>
-                  <p className="text-gray-500">Yeni üyelik başvuruları olduğunda e-posta bildirimi al</p>
-                </div>
-              </div>
-              
-              {/* Başvuru Formu Alanları */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Başvuru Formu Alanları
-                </label>
-                
-                <div className="space-y-3">
-                  {/* Ad Soyad */}
-                  <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        defaultChecked={true}
-                        disabled
-                        className="h-4 w-4 text-primary border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm font-medium text-gray-700">Ad Soyad</span>
-                    </div>
-                    <span className="text-xs text-red-500">Zorunlu Alan</span>
-                  </div>
-                  
-                  {/* E-posta */}
-                  <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        defaultChecked={true}
-                        disabled
-                        className="h-4 w-4 text-primary border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm font-medium text-gray-700">E-posta</span>
-                    </div>
-                    <span className="text-xs text-red-500">Zorunlu Alan</span>
-                  </div>
-                  
-                  {/* Telefon */}
-                  <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        defaultChecked={true}
-                        className="h-4 w-4 text-primary border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm font-medium text-gray-700">Telefon</span>
-                    </div>
-                    <span className="text-xs text-gray-500">İsteğe Bağlı</span>
-                  </div>
-                  
-                  {/* Doğum Yeri */}
-                  <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        defaultChecked={true}
-                        className="h-4 w-4 text-primary border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm font-medium text-gray-700">Doğum Yeri</span>
-                    </div>
-                    <span className="text-xs text-gray-500">İsteğe Bağlı</span>
-                  </div>
-                  
-                  {/* Ordu'daki İlçe */}
-                  <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        defaultChecked={true}
-                        className="h-4 w-4 text-primary border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm font-medium text-gray-700">Ordu'daki İlçe</span>
-                    </div>
-                    <span className="text-xs text-gray-500">İsteğe Bağlı</span>
-                  </div>
-                  
-                  {/* Mesaj */}
-                  <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        defaultChecked={true}
-                        className="h-4 w-4 text-primary border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm font-medium text-gray-700">Mesaj</span>
-                    </div>
-                    <span className="text-xs text-gray-500">İsteğe Bağlı</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="pt-4">
-                <button 
-                  type="submit"
-                  className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-md"
-                >
-                  Ayarları Kaydet
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
       </div>
-    </AdminLayout>
+    </div>
   );
 } 

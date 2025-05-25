@@ -1,121 +1,136 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/utils/firebase/client';
 import Link from 'next/link';
-import Image from 'next/image';
-import { FaUser, FaLock } from 'react-icons/fa';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
+  // Kullanıcı zaten giriş yapmışsa admin sayfasına yönlendir
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.push('/admin');
+      }
+      setCheckingAuth(false);
+    });
 
-    // Simple authentication - in production this should be more secure
-    if (username === 'admin' && password === 'Xre0q7cn.') {
-      // Store authentication in sessionStorage (more secure alternative would be using proper authentication like Next-Auth)
-      sessionStorage.setItem('izorder_admin_auth', 'true');
-      // Başlangıç aktivite zamanını kaydet
-      sessionStorage.setItem('izorder_last_activity', Date.now().toString());
-      router.push('/admin');
-    } else {
-      setError('Kullanıcı adı veya şifre hatalı.');
-      setIsLoading(false);
+    return () => unsubscribe();
+  }, [router]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Login successful:', userCredential.user.email);
+      
+      // Firebase Auth state değişikliği AuthCheck tarafından yakalanacak
+      // Manual yönlendirme yapmıyoruz, AuthCheck hallediyor
+    } catch (err: any) {
+      console.error('Login hatası:', err);
+      
+      // Firebase hata mesajlarını Türkçeleştir
+      let errorMessage = 'Giriş yaparken bir hata oluştu.';
+      
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        errorMessage = 'E-posta veya şifre hatalı.';
+      } else if (err.code === 'auth/too-many-requests') {
+        errorMessage = 'Çok fazla giriş denemesi. Lütfen daha sonra tekrar deneyin.';
+      } else if (err.code === 'auth/user-disabled') {
+        errorMessage = 'Bu hesap devre dışı bırakılmış.';
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg overflow-hidden">
-        <div className="px-6 py-8 sm:p-10">
-          <div className="flex justify-center">
-            <div className="relative w-24 h-24 mb-4">
-              <Image src="/logo.png" alt="İzorder Logo" fill className="object-contain" />
-            </div>
-          </div>
-          
-          <h2 className="text-center text-2xl font-bold text-gray-900 mb-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             İzorder Yönetim Paneli
           </h2>
-          
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
-            )}
-            
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                Kullanıcı Adı
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaUser className="text-gray-400" />
-                </div>
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  autoComplete="username"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
-                  placeholder="Kullanıcı adınız"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Şifre
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaLock className="text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
-                  placeholder="Şifreniz"
-                />
-              </div>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition disabled:opacity-50"
-              >
-                {isLoading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
-              </button>
-            </div>
-          </form>
-        </div>
-        
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 sm:px-10">
-          <p className="text-xs text-center text-gray-500">
-            <Link href="/" className="text-primary hover:text-primary-dark">
-              Siteye Dön
-            </Link>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Admin hesabınızla giriş yapın
           </p>
         </div>
+        
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <span className="block sm:inline">{error}</span>
+          </div>
+        )}
+        
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="email-address" className="sr-only">E-posta Adresi</label>
+              <input
+                id="email-address"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+                placeholder="E-posta adresi"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">Şifre</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+                placeholder="Şifre"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+            >
+              {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
+            </button>
+          </div>
+          
+          <div className="text-sm text-center">
+            <Link href="/" className="font-medium text-primary hover:text-primary-dark">
+              Ana Sayfaya Dön
+            </Link>
+          </div>
+        </form>
       </div>
     </div>
   );
-} 
+}

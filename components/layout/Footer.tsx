@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { FaFacebook, FaInstagram, FaMapMarkerAlt, FaPhone, FaEnvelope } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
-import { getContactInfo } from '@/lib/data';
+import { getContactInfoClient } from '@/utils/firebase/firestore';
 
 export default function Footer() {
   const [contactInfo, setContactInfo] = useState({
@@ -19,8 +19,10 @@ export default function Footer() {
   
   useEffect(() => {
     const fetchData = async () => {
-      const data = await getContactInfo();
-      setContactInfo(data);
+      const data = await getContactInfoClient();
+      if (data) {
+        setContactInfo(data);
+      }
     };
     
     fetchData().catch(console.error);

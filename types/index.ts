@@ -68,10 +68,11 @@ export interface ContactInfo {
 
 // Dashboard Stats Type
 export interface DashboardStats {
-  totalNews: number;
-  totalPressCoverage: number;
-  totalGalleryImages: number;
-  totalBoardMembers: number;
+  newsCount: number;
+  galleryCount: number;
+  boardMembersCount: number;
+  pressCoverageCount: number;
+  recentActivities: Activity[];
 }
 
 // Activity Type
@@ -120,12 +121,15 @@ export interface HistoryContent {
   legalStatus: string;
   initialMemberCount: string;
   currentMemberCount: string;
-  milestones: {
+  milestones: Array<{
+    id?: string;
     year: string;
+    title?: string;
     description: string;
-  }[];
-  additionalImages: {
+  }>;
+  additionalImages: Array<{
+    id?: string;
     url: string;
     caption: string;
-  }[];
+  }>;
 } 

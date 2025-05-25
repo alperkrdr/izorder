@@ -14,6 +14,17 @@ export default function NewsSlider({ news }: NewsSliderProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Check if news array is empty or undefined
+  if (!news || news.length === 0) {
+    return (
+      <div className="max-w-4xl mx-auto relative rounded-xl overflow-hidden shadow-lg bg-gray-200">
+        <div className="h-64 sm:h-72 md:h-80 lg:h-96 w-full flex items-center justify-center">
+          <p className="text-gray-500">Haberler yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.</p>
+        </div>
+      </div>
+    );
+  }
+
   // Auto-advance slides every 5 seconds
   useEffect(() => {
     const resetTimeout = () => {
@@ -50,8 +61,8 @@ export default function NewsSlider({ news }: NewsSliderProps) {
       {/* Main Slide */}
       <div className="relative h-64 sm:h-72 md:h-80 lg:h-96 w-full">
         <Image
-          src={news[currentIndex].imageUrl}
-          alt={news[currentIndex].title}
+          src={news[currentIndex]?.imageUrl || '/placeholder-news.jpg'}
+          alt={news[currentIndex]?.title || 'Haber görseli'}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 768px) 100vw, (max-width: 1024px) 100vw, 896px"
           className="object-cover"
@@ -61,10 +72,10 @@ export default function NewsSlider({ news }: NewsSliderProps) {
         {/* Caption */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent flex flex-col justify-end">
           <div className="p-4 md:p-6 text-white">
-            <h3 className="text-xl md:text-2xl font-bold mb-2">{news[currentIndex].title}</h3>
-            <p className="text-white/80 mb-3 line-clamp-2">{news[currentIndex].summary}</p>
+            <h3 className="text-xl md:text-2xl font-bold mb-2">{news[currentIndex]?.title || 'Haber başlığı'}</h3>
+            <p className="text-white/80 mb-3 line-clamp-2">{news[currentIndex]?.summary || 'Haber özeti'}</p>
             <Link 
-              href={`/haberler/${news[currentIndex].slug}`}
+              href={`/haberler/${news[currentIndex]?.slug || '#'}`}
               className="inline-block bg-primary text-white px-4 py-2 rounded hover:bg-primary-dark transition"
             >
               Devamını Oku

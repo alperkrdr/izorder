@@ -5,6 +5,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { NewsItem } from '@/types';
 import { FaEdit, FaTrash, FaEye } from 'react-icons/fa';
+import { deleteNews } from '@/utils/firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 interface NewsTableProps {
   news: NewsItem[];
@@ -12,15 +14,34 @@ interface NewsTableProps {
 
 export default function NewsTable({ news }: NewsTableProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
 
-  // Dummy function for delete action (would connect to actual API in real implementation)
-  const handleDelete = (id: string) => {
-    alert(`Haber #${id} silindi (Demo)`);
-    setDeleteConfirm(null);
+  const handleDelete = async (id: string) => {
+    setIsDeleting(true);
+    setError('');
+    
+    try {
+      await deleteNews(id);
+      setDeleteConfirm(null);
+      // Refresh the page to update the list
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message || 'Silme işlemi sırasında bir hata oluştu.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
   
   return (
     <div className="bg-white shadow-md rounded-lg overflow-hidden">
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 m-4 rounded">
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
+      
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -79,9 +100,10 @@ export default function NewsTable({ news }: NewsTableProps) {
                       <div className="flex items-center">
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="text-white bg-red-600 hover:bg-red-700 px-2 py-1 text-xs rounded"
+                          disabled={isDeleting}
+                          className="text-white bg-red-600 hover:bg-red-700 px-2 py-1 text-xs rounded disabled:opacity-50"
                         >
-                          Sil
+                          {isDeleting ? 'Siliniyor...' : 'Sil'}
                         </button>
                         <button
                           onClick={() => setDeleteConfirm(null)}

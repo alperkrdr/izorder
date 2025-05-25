@@ -2,9 +2,135 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-rgb: 255, 255, 255;
+/* Import React Quill styles */
+@import 'react-quill/dist/quill.snow.css';
+
+@layer base {
+  :root {
+    --primary: #1e40af;
+    --primary-dark: #1e3a8a;
+    --secondary: #f59e0b;
+    --secondary-dark: #d97706;
+  }
+  
+  body {
+    @apply text-gray-800 bg-gray-50;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-gray-900;
+  }
+}
+
+@layer components {
+  .container-custom {
+    @apply container mx-auto px-4 max-w-7xl;
+  }
+  
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition;
+  }
+  
+  .btn-secondary {
+    @apply bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 px-4 rounded transition;
+  }
+  
+  .section-title {
+    @apply text-2xl font-bold mb-4 text-blue-800;
+  }
+}
+
+.bg-primary {
+  background-color: var(--primary);
+}
+
+.bg-primary-dark {
+  background-color: var(--primary-dark);
+}
+
+.bg-secondary {
+  background-color: var(--secondary);
+}
+
+.bg-secondary-dark {
+  background-color: var(--secondary-dark);
+}
+
+.text-primary {
+  color: var(--primary);
+}
+
+.prose img {
+  margin: 1rem auto;
+  border-radius: 0.5rem;
+}
+
+/* Quill editor styles */
+.ql-container {
+  min-height: 10rem;
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.ql-editor {
+  height: 100%;
+  flex: 1;
+  overflow-y: auto;
+  width: 100%;
+}
+
+/* React Quill Editor Styles - Simplified version */
+.quill {
+  border-radius: 0.375rem;
+  border: 1px solid #e5e7eb;
+}
+
+.ql-toolbar {
+  border-top-left-radius: 0.375rem;
+  border-top-right-radius: 0.375rem;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.ql-editor p {
+  margin-bottom: 0.5rem;
+}
+
+.ql-editor h1, .ql-editor h2, .ql-editor h3 {
+  font-weight: bold;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.ql-editor h1 {
+  font-size: 1.5rem;
+}
+
+.ql-editor h2 {
+  font-size: 1.25rem;
+}
+
+.ql-editor h3 {
+  font-size: 1.125rem;
+}
+
+.ql-editor ul, .ql-editor ol {
+  padding-left: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ql-editor ul {
+  list-style-type: disc;
+}
+
+.ql-editor ol {
+  list-style-type: decimal;
+}
+
+.ql-editor li {
+  margin-bottom: 0.25rem;
 }
 
 /* Removing dark mode media query to prevent black background */
@@ -24,4 +150,69 @@ body {
   .container-custom {
     @apply container mx-auto px-4 sm:px-6 lg:px-8;
   }
+}
+
+/* React Quill Editor Styles - Simplified version */
+.quill {
+  border-radius: 0.375rem;
+  border: 1px solid #e5e7eb;
+}
+
+.ql-toolbar {
+  border-top-left-radius: 0.375rem;
+  border-top-right-radius: 0.375rem;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.ql-container {
+  border-bottom-left-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+  background-color: white;
+  min-height: 10rem;
+}
+
+.ql-editor {
+  min-height: 10rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.ql-editor p {
+  margin-bottom: 0.5rem;
+}
+
+.ql-editor h1, .ql-editor h2, .ql-editor h3 {
+  font-weight: bold;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.ql-editor h1 {
+  font-size: 1.5rem;
+}
+
+.ql-editor h2 {
+  font-size: 1.25rem;
+}
+
+.ql-editor h3 {
+  font-size: 1.125rem;
+}
+
+.ql-editor ul, .ql-editor ol {
+  padding-left: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ql-editor ul {
+  list-style-type: disc;
+}
+
+.ql-editor ol {
+  list-style-type: decimal;
+}
+
+.ql-editor li {
+  margin-bottom: 0.25rem;
 } 

@@ -11,25 +11,25 @@ export default function DashboardStatsComponent({ stats }: DashboardStatsProps) 
   const statItems = [
     {
       label: 'Toplam Haber',
-      value: stats.totalNews,
+      value: stats.newsCount,
       icon: FaNewspaper,
       color: 'bg-blue-500',
     },
     {
       label: 'Basın Haberleri',
-      value: stats.totalPressCoverage,
+      value: stats.pressCoverageCount,
       icon: FaRegFileAlt,
       color: 'bg-green-500',
     },
     {
       label: 'Galeri Görselleri',
-      value: stats.totalGalleryImages,
+      value: stats.galleryCount,
       icon: FaImages,
       color: 'bg-amber-500',
     },
     {
       label: 'Yönetim Kurulu Üyeleri',
-      value: stats.totalBoardMembers,
+      value: stats.boardMembersCount,
       icon: FaUsers,
       color: 'bg-purple-500',
     },

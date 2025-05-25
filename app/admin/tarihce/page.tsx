@@ -1,75 +1,311 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FaHistory, FaImage, FaCalendarAlt, FaUser, FaBuilding, FaUsers, FaTrash, FaPlus } from 'react-icons/fa';
-import AdminLayout from '@/components/admin/AdminLayout';
-import { HistoryContent } from '@/types';
+import { auth } from '@/utils/firebase/client';
+import { getHistoryContent, updateHistoryContent } from '@/utils/firebase/dataService';
+import { FaSave, FaUpload, FaExclamationCircle, FaPlus, FaTrash } from 'react-icons/fa';
+import { collection, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '@/utils/firebase/client';
+import { uploadImageWithAuth } from '@/utils/firebase/storageUtils';
 
-export default function HistoryManagementPage() {
-  const [historyContent, setHistoryContent] = useState<HistoryContent | null>(null);
+// Define the history content type
+interface HistoryContent {
+  content: string;
+  mainImageUrl: string;
+  foundingDate: string;
+  foundingPresident: string;
+  legalStatus: string;
+  initialMemberCount: string;
+  currentMemberCount: string;
+  milestones: Array<{
+    id?: string;
+    year: string;
+    title?: string;
+    description: string;
+  }>;
+  additionalImages: Array<{
+    id?: string;
+    url: string;
+    caption: string;
+  }>;
+}
+
+interface Milestone {
+  id: string;
+  year: string;
+  title: string;
+  description: string;
+}
+
+interface AdditionalImage {
+  id: string;
+  url: string;
+  caption: string;
+}
+
+export default function HistoryPage() {
+  // State for form fields
+  const [content, setContent] = useState('');
+  const [mainImageUrl, setMainImageUrl] = useState('');
+  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
+  const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
+  const [foundingDate, setFoundingDate] = useState('');
+  const [foundingPresident, setFoundingPresident] = useState('');
+  const [legalStatus, setLegalStatus] = useState('');
+  const [initialMemberCount, setInitialMemberCount] = useState('');
+  const [currentMemberCount, setCurrentMemberCount] = useState('');
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [additionalImages, setAdditionalImages] = useState<AdditionalImage[]>([]);
+  
+  // UI state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   
-  // Kilometre taşı eklemek için
-  const [newMilestone, setNewMilestone] = useState({ year: '', description: '' });
+  // New milestone form state
+  const [newMilestone, setNewMilestone] = useState({
+    year: '',
+    title: '',
+    description: ''
+  });
   
-  // Yeni görsel eklemek için
-  const [newImage, setNewImage] = useState({ url: '', caption: '' });
-
+  // New additional image form state
+  const [newAdditionalImage, setNewAdditionalImage] = useState<{
+    file: File | null;
+    preview: string | null;
+    caption: string;
+  }>({
+    file: null,
+    preview: null,
+    caption: ''
+  });
+  
+  // Track additional image files to upload
+  const [additionalImageFiles, setAdditionalImageFiles] = useState<Array<{id: string, file: File}>>([]);
+  
+  // Fetch history content on component mount
   useEffect(() => {
     const fetchHistoryContent = async () => {
       try {
-        console.log('Fetching history content...');
-        const response = await fetch('/api/admin/history');
+        setLoading(true);
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
+        // Get the history document using our data service
+        const historyData = await getHistoryContent();
         
-        const data = await response.json();
-        console.log('Received data:', data);
-        
-        if (data.success) {
-          setHistoryContent(data.data);
+        if (historyData) {
+          // Set form fields with data from Firestore
+          setContent(historyData.content || '');
+          setMainImageUrl(historyData.mainImageUrl || '');
+          setMainImagePreview(historyData.mainImageUrl || null);
+          setFoundingDate(historyData.foundingDate || '');
+          setFoundingPresident(historyData.foundingPresident || '');
+          setLegalStatus(historyData.legalStatus || '');
+          setInitialMemberCount(historyData.initialMemberCount || '');
+          setCurrentMemberCount(historyData.currentMemberCount || '');
+          
+          // Ensure the milestones have the required id and title properties
+          if (historyData.milestones) {
+            const formattedMilestones: Milestone[] = historyData.milestones.map(m => ({
+              id: (m as any).id || Date.now().toString() + Math.random().toString(36).substring(2, 9),
+              year: m.year || '',
+              title: (m as any).title || '',
+              description: m.description || ''
+            }));
+            setMilestones(formattedMilestones);
+          } else {
+            setMilestones([]);
+          }
+          
+          // Ensure additional images have the required id property
+          if (historyData.additionalImages) {
+            const formattedImages: AdditionalImage[] = historyData.additionalImages.map(img => ({
+              id: (img as any).id || Date.now().toString() + Math.random().toString(36).substring(2, 9),
+              url: img.url || '',
+              caption: img.caption || ''
+            }));
+            setAdditionalImages(formattedImages);
+          } else {
+            setAdditionalImages([]);
+          }
         } else {
-          throw new Error(data.message || 'Veri alınamadı');
+          // Set default values if document doesn't exist
+          setContent('<p>İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneğimiz, 2005 yılında kurulmuştur...</p>');
+          setMainImageUrl('/images/history-main.jpg');
         }
-      } catch (error) {
-        console.error('Veri alma hatası:', error);
-        setMessage({
-          text: `Tarihçe içeriği alınamadı: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
-          type: 'error'
-        });
+      } catch (error: any) {
+        console.error('Error fetching history content:', error);
+        setError('Tarihçe içeriği yüklenirken bir hata oluştu.');
       } finally {
         setLoading(false);
       }
     };
-
+    
     fetchHistoryContent();
   }, []);
-
+    // Handle main image selection
+  const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Check file type
+    if (!file.type.includes('image/')) {
+      setError('Lütfen geçerli bir görsel dosyası seçin.');
+      return;
+    }
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Görsel dosyası 5MB\'dan küçük olmalıdır.');
+      return;
+    }
+    
+    setMainImageFile(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setMainImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  // Handle additional image selection
+  const handleAdditionalImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Check file type
+    if (!file.type.includes('image/')) {
+      setError('Lütfen geçerli bir görsel dosyası seçin.');
+      return;
+    }
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Görsel dosyası 5MB\'dan küçük olmalıdır.');
+      return;
+    }
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setNewAdditionalImage({
+        ...newAdditionalImage,
+        file,
+        preview: reader.result as string
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  // Add a new milestone
+  const addMilestone = () => {
+    if (!newMilestone.year || !newMilestone.title) {
+      setError('Yıl ve başlık alanları zorunludur.');
+      return;
+    }
+    
+    const milestone: Milestone = {
+      id: Date.now().toString(),
+      ...newMilestone
+    };
+    
+    setMilestones([...milestones, milestone]);
+    setNewMilestone({ year: '', title: '', description: '' });
+    setSuccess('Dönüm noktası eklendi.');
+    
+    // Clear success message after 3 seconds
+    setTimeout(() => setSuccess(null), 3000);
+  };
+  
+  // Remove a milestone
+  const removeMilestone = (id: string) => {
+    setMilestones(milestones.filter(m => m.id !== id));
+  };
+  
+  // Add a new additional image
+  const addAdditionalImage = async () => {
+    if (!newAdditionalImage.file || !newAdditionalImage.caption) {
+      setError('Görsel ve başlık alanları zorunludur.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Create temporary ID for the image
+      const imageId = Date.now().toString();
+      
+      // Add to additionalImages array with a temporary local URL
+      const newImage: AdditionalImage = {
+        id: imageId,
+        url: URL.createObjectURL(newAdditionalImage.file),
+        caption: newAdditionalImage.caption
+      };
+      
+      // Add to additional images array
+      setAdditionalImages([...additionalImages, newImage]);
+      
+      // Add to files to be uploaded on save
+      setAdditionalImageFiles([
+        ...additionalImageFiles,
+        { id: imageId, file: newAdditionalImage.file }
+      ]);
+      
+      setNewAdditionalImage({ file: null, preview: null, caption: '' });
+      setSuccess('Görsel eklendi. Değişiklikleri kaydetmek için "Kaydet" butonuna tıklayın.');
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error: any) {
+      console.error('Error adding additional image:', error);
+      setError('Görsel eklenirken bir hata oluştu.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Remove an additional image
+  const removeAdditionalImage = (id: string) => {
+    setAdditionalImages(additionalImages.filter(img => img.id !== id));
+    setAdditionalImageFiles(additionalImageFiles.filter(img => img.id !== id));
+  };
+  
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    setMessage(null);
-
+    
+    if (saving) return;
+    
+    // Validate form
+    if (!content.trim()) {
+      setError('İçerik alanı zorunludur.');
+      return;
+    }
+    
     try {
-      console.log('Submitting form...');
-      // Form verilerini topla
-      const form = e.target as HTMLFormElement;
-      const formData = new FormData(form);
+      setSaving(true);
+      setError(null);
       
-      // FormData'yı JSON'a dönüştür
-      const content = formData.get('content') as string;
-      const mainImageUrl = formData.get('mainImageUrl') as string;
-      const foundingDate = formData.get('foundingDate') as string;
-      const foundingPresident = formData.get('foundingPresident') as string;
-      const legalStatus = formData.get('legalStatus') as string;
-      const initialMemberCount = formData.get('initialMemberCount') as string;
-      const currentMemberCount = formData.get('currentMemberCount') as string;
-
-      const dataToSend = {
+      // Get current user
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        setError('Oturum açmanız gerekiyor.');
+        console.error('Firebase kimlik doğrulama hatası: Kullanıcı oturumu açık değil');
+        return;
+      }
+      
+      // Log the current user details for debugging
+      console.log('Current user:', {
+        uid: currentUser.uid,
+        email: currentUser.email,
+        isAnonymous: currentUser.isAnonymous,
+        emailVerified: currentUser.emailVerified,
+      });
+      
+      // Prepare history content data
+      const historyData: HistoryContent = {
         content,
         mainImageUrl,
         foundingDate,
@@ -77,559 +313,470 @@ export default function HistoryManagementPage() {
         legalStatus,
         initialMemberCount,
         currentMemberCount,
-        // Mevcut milestone ve image verilerini koruyoruz
-        milestones: historyContent?.milestones || [],
-        additionalImages: historyContent?.additionalImages || []
+        milestones,
+        additionalImages
       };
       
-      console.log('Sending data:', dataToSend);
-
-      const response = await fetch('/api/admin/history', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dataToSend),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Received result:', result);
-
-      if (result.success) {
-        setMessage({
-          text: 'Tarihçe içeriği başarıyla güncellendi.',
-          type: 'success'
+      // Test Firebase izinlerini kontrol et
+      try {
+        console.log('Firebase izinleri kontrol ediliyor...');
+        
+        // Firebase'e basit bir veri yazarak izinleri kontrol et
+        const testCollection = collection(db, '__test_permissions');
+        const testDoc = await addDoc(testCollection, { 
+          testValue: 'test', 
+          timestamp: new Date().toISOString(),
+          userId: currentUser.uid
         });
         
-        // Güncel veriyi state'e yükle
-        if (result.updatedData) {
-          setHistoryContent(result.updatedData);
-        }
-      } else {
-        setMessage({
-          text: `Hata: ${result.message}`,
-          type: 'error'
-        });
+        // Test belgesi başarıyla oluşturulduysa sil
+        await deleteDoc(doc(db, '__test_permissions', testDoc.id));
+        console.log('Firebase izinleri doğrulandı.');
+      } catch (permError: any) {
+        console.error('Firebase izin hatası:', permError);
+        const errorCode = permError.code || '';
+        const errorMessage = permError.message || 'Bilinmeyen hata';
+        
+        setError(`Firebase izin hatası: ${errorCode} - ${errorMessage}. Lütfen aşağıdaki adımları deneyin:
+          1. Firebase konsolundan kuralları güncelleyin
+          2. Oturumunuzu yenileyin
+          3. Yönetici ile iletişime geçin`);
+        setSaving(false);
+        return;
       }
-    } catch (error) {
-      console.error('Kaydetme hatası:', error);
-      setMessage({
-        text: `Bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
-        type: 'error'
-      });
+        // Handle main image upload first if a new image is selected
+      if (mainImageFile) {
+        console.log('Ana görsel yükleniyor:', mainImageFile.name);
+        setError(null);
+        
+        try {
+          const uploadResult = await uploadImageWithAuth(
+            mainImageFile, 
+            'history_images', 
+            `main-${Date.now()}-${mainImageFile.name}`
+          );
+          
+          if (!uploadResult.success) {
+            setError(`Ana görsel yükleme hatası: ${uploadResult.error}`);
+            setSaving(false);
+            return;
+          }
+          
+          // Update the main image URL with uploaded image
+          historyData.mainImageUrl = uploadResult.url!;
+          console.log('Ana görsel yükleme başarılı:', uploadResult.url);
+        } catch (uploadError: any) {
+          console.error('Ana görsel yükleme hatası:', uploadError);
+          setError(`Ana görsel yükleme hatası: ${uploadError.message}`);
+          setSaving(false);
+          return;
+        }
+      }
+      
+      // Use the data service to update history content with detailed error handling
+      try {
+        await updateHistoryContent(
+          historyData, 
+          mainImageFile, 
+          additionalImageFiles,
+          currentUser.uid
+        );
+      } catch (updateError: any) {
+        console.error('İçerik güncelleme hatası:', updateError);
+        const errorCode = updateError.code || '';
+        const errorMessage = updateError.message || 'Bilinmeyen hata';
+        
+        if (errorCode.includes('permission-denied')) {
+          setError(`Firebase yetki hatası: Veritabanına yazma izniniz yok. Lütfen yönetici ile iletişime geçin.`);
+        } else {
+          setError(`Tarihçe içeriği kaydedilirken bir hata oluştu: ${errorMessage}`);
+        }
+        throw updateError; // Hatayı yeniden fırlat
+      }
+      
+      // Clear uploaded files tracking
+      setAdditionalImageFiles([]);
+      setMainImageFile(null);
+      
+      setSuccess('Tarihçe içeriği başarıyla kaydedildi.');
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error: any) {
+      console.error('Error saving history content:', error);
+      if (!error.message.includes('Firebase')) {
+        // Eğer yukarıda özel hata mesajı belirlenmemişse genel hata mesajı göster
+        setError(error.message || 'Tarihçe içeriği kaydedilirken bir hata oluştu.');
+      }
     } finally {
       setSaving(false);
     }
   };
   
-  // Kilometre taşı silme işlevi
-  const deleteMilestone = async (index: number) => {
-    if (!historyContent) return;
-    
-    try {
-      const updatedMilestones = [...historyContent.milestones];
-      updatedMilestones.splice(index, 1);
-      
-      const response = await fetch('/api/admin/history', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...historyContent,
-          milestones: updatedMilestones
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        setHistoryContent({
-          ...historyContent,
-          milestones: updatedMilestones
-        });
-        setMessage({
-          text: 'Kilometre taşı başarıyla silindi.',
-          type: 'success'
-        });
-      } else {
-        throw new Error(result.message || 'İşlem başarısız');
-      }
-    } catch (error) {
-      console.error('Silme hatası:', error);
-      setMessage({
-        text: `Kilometre taşı silinemedi: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
-        type: 'error'
-      });
-    }
-  };
-  
-  // Kilometre taşı ekleme işlevi
-  const addMilestone = async () => {
-    if (!historyContent || !newMilestone.year || !newMilestone.description) return;
-    
-    try {
-      const updatedMilestones = [
-        ...historyContent.milestones,
-        { year: newMilestone.year, description: newMilestone.description }
-      ];
-      
-      const response = await fetch('/api/admin/history', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...historyContent,
-          milestones: updatedMilestones
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        setHistoryContent({
-          ...historyContent,
-          milestones: updatedMilestones
-        });
-        setMessage({
-          text: 'Kilometre taşı başarıyla eklendi.',
-          type: 'success'
-        });
-        setNewMilestone({ year: '', description: '' });
-      } else {
-        throw new Error(result.message || 'İşlem başarısız');
-      }
-    } catch (error) {
-      console.error('Ekleme hatası:', error);
-      setMessage({
-        text: `Kilometre taşı eklenemedi: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
-        type: 'error'
-      });
-    }
-  };
-  
-  // Görsel silme işlevi
-  const deleteImage = async (index: number) => {
-    if (!historyContent) return;
-    
-    try {
-      const updatedImages = [...historyContent.additionalImages];
-      updatedImages.splice(index, 1);
-      
-      const response = await fetch('/api/admin/history', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...historyContent,
-          additionalImages: updatedImages
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        setHistoryContent({
-          ...historyContent,
-          additionalImages: updatedImages
-        });
-        setMessage({
-          text: 'Görsel başarıyla silindi.',
-          type: 'success'
-        });
-      } else {
-        throw new Error(result.message || 'İşlem başarısız');
-      }
-    } catch (error) {
-      console.error('Silme hatası:', error);
-      setMessage({
-        text: `Görsel silinemedi: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
-        type: 'error'
-      });
-    }
-  };
-  
-  // Görsel ekleme işlevi
-  const addImage = async () => {
-    if (!historyContent || !newImage.url) return;
-    
-    try {
-      const updatedImages = [
-        ...historyContent.additionalImages,
-        { url: newImage.url, caption: newImage.caption || '' }
-      ];
-      
-      const response = await fetch('/api/admin/history', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...historyContent,
-          additionalImages: updatedImages
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        setHistoryContent({
-          ...historyContent,
-          additionalImages: updatedImages
-        });
-        setMessage({
-          text: 'Görsel başarıyla eklendi.',
-          type: 'success'
-        });
-        setNewImage({ url: '', caption: '' });
-      } else {
-        throw new Error(result.message || 'İşlem başarısız');
-      }
-    } catch (error) {
-      console.error('Ekleme hatası:', error);
-      setMessage({
-        text: `Görsel eklenemedi: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
-        type: 'error'
-      });
-    }
-  };
-
-  if (loading) {
+  if (loading && !saving) {
     return (
-      <AdminLayout>
-        <div className="flex justify-center items-center h-64">
-          <div className="text-gray-500">Yükleniyor...</div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  if (!historyContent) {
-    return (
-      <AdminLayout>
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          <p>Tarihçe içeriği yüklenemedi. Lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.</p>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  return (
-    <AdminLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Tarihçe Yönetimi</h1>
-        <p className="text-gray-600 mt-1">Dernek tarihçe içeriğini düzenleyebilirsiniz.</p>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
+    );
+  }
+  
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold mb-6">Tarihçe Sayfası Düzenleme</h1>
       
-      {message && (
-        <div className={`mb-6 p-4 rounded ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          {message.text}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-6">
+          <div className="flex items-center">
+            <FaExclamationCircle className="text-red-500 mr-2" />
+            <p className="text-red-700">{error}</p>
+          </div>
         </div>
       )}
       
-      <div className="bg-white shadow-md rounded-lg overflow-hidden mb-6">
-        <div className="border-b border-gray-200 px-4 py-3 bg-gray-50">
-          <h2 className="text-lg font-medium text-gray-800 flex items-center">
-            <FaHistory className="mr-2 text-primary" />
-            Tarihçe İçeriği
-          </h2>
+      {success && (
+        <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded mb-6">
+          <p className="text-green-700">{success}</p>
         </div>
-        <div className="p-6">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                İçerik
-              </label>
-              <textarea
-                name="content"
-                rows={12}
-                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                defaultValue={historyContent.content}
-              ></textarea>
-              <p className="mt-1 text-xs text-gray-500">
-                HTML formatında içerik girebilirsiniz. (örn: &lt;p&gt;Paragraf&lt;/p&gt;)
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ana Görsel URL
-                </label>
-                <div className="flex">
-                  <div className="bg-gray-100 p-2 flex items-center justify-center rounded-l-md border border-r-0 border-gray-300">
-                    <FaImage className="text-gray-500" />
-                  </div>
-                  <input 
-                    name="mainImageUrl"
-                    type="text"
-                    className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                    defaultValue={historyContent.mainImageUrl}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Kuruluş Tarihi
-                </label>
-                <div className="flex">
-                  <div className="bg-gray-100 p-2 flex items-center justify-center rounded-l-md border border-r-0 border-gray-300">
-                    <FaCalendarAlt className="text-gray-500" />
-                  </div>
-                  <input 
-                    name="foundingDate"
-                    type="text"
-                    className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                    defaultValue={historyContent.foundingDate}
-                  />
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Kurucu Başkan
-                </label>
-                <div className="flex">
-                  <div className="bg-gray-100 p-2 flex items-center justify-center rounded-l-md border border-r-0 border-gray-300">
-                    <FaUser className="text-gray-500" />
-                  </div>
-                  <input 
-                    name="foundingPresident"
-                    type="text"
-                    className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                    defaultValue={historyContent.foundingPresident}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Resmi Statü
-                </label>
-                <div className="flex">
-                  <div className="bg-gray-100 p-2 flex items-center justify-center rounded-l-md border border-r-0 border-gray-300">
-                    <FaBuilding className="text-gray-500" />
-                  </div>
-                  <input 
-                    name="legalStatus"
-                    type="text"
-                    className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                    defaultValue={historyContent.legalStatus}
-                  />
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  İlk Üye Sayısı
-                </label>
-                <div className="flex">
-                  <div className="bg-gray-100 p-2 flex items-center justify-center rounded-l-md border border-r-0 border-gray-300">
-                    <FaUsers className="text-gray-500" />
-                  </div>
-                  <input 
-                    name="initialMemberCount"
-                    type="text"
-                    className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                    defaultValue={historyContent.initialMemberCount}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mevcut Üye Sayısı
-                </label>
-                <div className="flex">
-                  <div className="bg-gray-100 p-2 flex items-center justify-center rounded-l-md border border-r-0 border-gray-300">
-                    <FaUsers className="text-gray-500" />
-                  </div>
-                  <input 
-                    name="currentMemberCount"
-                    type="text"
-                    className="block w-full border-gray-300 rounded-r-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                    defaultValue={historyContent.currentMemberCount}
-                  />
-                </div>
-              </div>
-            </div>
-            
-            <div className="pt-4">
-              <button 
-                type="submit"
-                disabled={saving}
-                className={`bg-primary ${saving ? 'opacity-75' : 'hover:bg-primary-dark'} text-white px-4 py-2 rounded-md`}
-              >
-                {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+      )}
       
-      <div className="bg-white shadow-md rounded-lg overflow-hidden mb-6">
-        <div className="border-b border-gray-200 px-4 py-3 bg-gray-50">
-          <h2 className="text-lg font-medium text-gray-800">Önemli Kilometre Taşları</h2>
+      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-6">
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Ana İçerik*
+          </label>
+          <div className="border border-gray-300 rounded-md">
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="w-full p-3 min-h-[300px] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Tarihçe içeriğini buraya girin..."
+            />
+          </div>
+          <p className="mt-1 text-sm text-gray-500">HTML içeriği desteklenmektedir (&lt;p&gt;, &lt;h1&gt;, &lt;strong&gt; vb.)</p>
         </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            {historyContent.milestones.map((milestone, index) => (
-              <div key={index} className="flex items-center space-x-3 border border-gray-200 rounded-md p-3">
-                <div className="w-16">
-                  <input 
-                    type="text" 
-                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                    value={milestone.year}
-                    readOnly
-                  />
-                </div>
-                <div className="flex-1">
-                  <input 
-                    type="text" 
-                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                    value={milestone.description}
-                    readOnly
-                  />
-                </div>
-                <button 
-                  type="button" 
-                  className="text-red-500 hover:text-red-700"
-                  onClick={() => deleteMilestone(index)}
-                >
-                  <FaTrash />
-                </button>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ana Görsel
+            </label>
+            <div className="flex items-center mb-2">
+              <label className="flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-md cursor-pointer hover:bg-blue-100">
+                <FaUpload className="mr-2" />
+                <span>Görsel Seç</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleMainImageChange}
+                  className="hidden"
+                />
+              </label>
+              {mainImageFile && (
+                <span className="ml-2 text-sm text-gray-500">
+                  {mainImageFile.name}
+                </span>
+              )}
+            </div>
+            {mainImagePreview && (
+              <div className="mt-2">
+                <img
+                  src={mainImagePreview}
+                  alt="Ana Görsel"
+                  className="max-h-40 rounded-md"
+                />
               </div>
-            ))}
+            )}
           </div>
           
-          <div className="mt-6 border-t border-gray-200 pt-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Yeni Kilometre Taşı Ekle</h3>
-            <div className="flex items-center space-x-3">
-              <div className="w-16">
-                <input 
-                  type="text" 
-                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                  placeholder="Yıl"
-                  value={newMilestone.year}
-                  onChange={(e) => setNewMilestone({...newMilestone, year: e.target.value})}
-                />
-              </div>
-              <div className="flex-1">
-                <input 
-                  type="text" 
-                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                  placeholder="Açıklama"
-                  value={newMilestone.description}
-                  onChange={(e) => setNewMilestone({...newMilestone, description: e.target.value})}
-                />
-              </div>
-              <button 
-                type="button"
-                className="bg-secondary hover:bg-secondary-dark text-white p-2 rounded-md"
-                onClick={addMilestone}
-                disabled={!newMilestone.year || !newMilestone.description}
-              >
-                <FaPlus />
-              </button>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="foundingDate" className="block text-sm font-medium text-gray-700 mb-1">
+                Kuruluş Yılı
+              </label>
+              <input
+                type="text"
+                id="foundingDate"
+                value={foundingDate}
+                onChange={(e) => setFoundingDate(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
-          </div>
-        </div>
-      </div>
-      
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <div className="border-b border-gray-200 px-4 py-3 bg-gray-50">
-          <h2 className="text-lg font-medium text-gray-800">Tarihimizden Kareler</h2>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {historyContent.additionalImages.map((image, index) => (
-              <div key={index} className="border border-gray-200 rounded-md p-3">
-                <div className="relative h-32 mb-3 rounded overflow-hidden">
-                  <img 
-                    src={image.url} 
-                    alt={image.caption}
-                    className="object-cover w-full h-full"
-                  />
-                </div>
-                <input 
-                  type="text" 
-                  className="block w-full mb-2 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                  placeholder="Görsel URL"
-                  value={image.url}
-                  readOnly
-                />
-                <input 
-                  type="text" 
-                  className="block w-full mb-2 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                  placeholder="Açıklama"
-                  value={image.caption}
-                  readOnly
-                />
-                <button 
-                  type="button" 
-                  className="text-red-500 hover:text-red-700 text-sm"
-                  onClick={() => deleteImage(index)}
-                >
-                  Kaldır
-                </button>
-              </div>
-            ))}
             
-            <div className="border border-dashed border-gray-300 rounded-md p-3">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Yeni Görsel Ekle</h3>
-              <input 
-                type="text" 
-                className="block w-full mb-2 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                placeholder="Görsel URL"
-                value={newImage.url}
-                onChange={(e) => setNewImage({...newImage, url: e.target.value})}
+            <div>
+              <label htmlFor="foundingPresident" className="block text-sm font-medium text-gray-700 mb-1">
+                Kurucu Başkan
+              </label>
+              <input
+                type="text"
+                id="foundingPresident"
+                value={foundingPresident}
+                onChange={(e) => setFoundingPresident(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <input 
-                type="text" 
-                className="block w-full mb-2 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                placeholder="Açıklama"
-                value={newImage.caption}
-                onChange={(e) => setNewImage({...newImage, caption: e.target.value})}
+            </div>
+            
+            <div>
+              <label htmlFor="legalStatus" className="block text-sm font-medium text-gray-700 mb-1">
+                Yasal Statü
+              </label>
+              <input
+                type="text"
+                id="legalStatus"
+                value={legalStatus}
+                onChange={(e) => setLegalStatus(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <button 
-                type="button"
-                className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-md w-full"
-                onClick={addImage}
-                disabled={!newImage.url}
-              >
-                Ekle
-              </button>
+            </div>
+            
+            <div>
+              <label htmlFor="initialMemberCount" className="block text-sm font-medium text-gray-700 mb-1">
+                İlk Üye Sayısı
+              </label>
+              <input
+                type="text"
+                id="initialMemberCount"
+                value={initialMemberCount}
+                onChange={(e) => setInitialMemberCount(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="currentMemberCount" className="block text-sm font-medium text-gray-700 mb-1">
+                Mevcut Üye Sayısı
+              </label>
+              <input
+                type="text"
+                id="currentMemberCount"
+                value={currentMemberCount}
+                onChange={(e) => setCurrentMemberCount(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
           </div>
         </div>
-      </div>
-    </AdminLayout>
+        
+        <div className="mb-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-3">Dönüm Noktaları</h3>
+          
+          <div className="bg-gray-50 p-4 rounded-md mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+              <div>
+                <label htmlFor="milestoneYear" className="block text-sm font-medium text-gray-700 mb-1">
+                  Yıl*
+                </label>
+                <input
+                  type="text"
+                  id="milestoneYear"
+                  value={newMilestone.year}
+                  onChange={(e) => setNewMilestone({ ...newMilestone, year: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="milestoneTitle" className="block text-sm font-medium text-gray-700 mb-1">
+                  Başlık*
+                </label>
+                <input
+                  type="text"
+                  id="milestoneTitle"
+                  value={newMilestone.title}
+                  onChange={(e) => setNewMilestone({ ...newMilestone, title: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="milestoneDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                  Açıklama
+                </label>
+                <input
+                  type="text"
+                  id="milestoneDescription"
+                  value={newMilestone.description}
+                  onChange={(e) => setNewMilestone({ ...newMilestone, description: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={addMilestone}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                <FaPlus className="mr-2" /> Ekle
+              </button>
+            </div>
+          </div>
+          
+          {milestones.length > 0 ? (
+            <div className="bg-white border border-gray-200 rounded-md overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Yıl
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Başlık
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Açıklama
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      İşlemler
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {milestones.map((milestone) => (
+                    <tr key={milestone.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {milestone.year}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {milestone.title}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {milestone.description}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          type="button"
+                          onClick={() => removeMilestone(milestone.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <FaTrash className="inline" /> Sil
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center p-4 bg-gray-50 rounded-md">
+              <p className="text-gray-500">Henüz dönüm noktası eklenmemiş.</p>
+            </div>
+          )}
+        </div>
+        
+        <div className="mb-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-3">Ek Görseller</h3>
+          
+          <div className="bg-gray-50 p-4 rounded-md mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Görsel*
+                </label>
+                <div className="flex items-center">
+                  <label className="flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-md cursor-pointer hover:bg-blue-100">
+                    <FaUpload className="mr-2" />
+                    <span>Görsel Seç</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAdditionalImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                  {newAdditionalImage.file && (
+                    <span className="ml-2 text-sm text-gray-500">
+                      {newAdditionalImage.file.name}
+                    </span>
+                  )}
+                </div>
+                {newAdditionalImage.preview && (
+                  <div className="mt-2">
+                    <img
+                      src={newAdditionalImage.preview}
+                      alt="Ek Görsel"
+                      className="max-h-40 rounded-md"
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <label htmlFor="imageCaption" className="block text-sm font-medium text-gray-700 mb-1">
+                  Başlık*
+                </label>
+                <input
+                  type="text"
+                  id="imageCaption"
+                  value={newAdditionalImage.caption}
+                  onChange={(e) => setNewAdditionalImage({ ...newAdditionalImage, caption: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex justify-end mt-4">
+                  <button
+                    type="button"
+                    onClick={addAdditionalImage}
+                    disabled={!newAdditionalImage.file || !newAdditionalImage.caption}
+                    className={`flex items-center px-4 py-2 rounded-md text-white ${
+                      !newAdditionalImage.file || !newAdditionalImage.caption
+                        ? 'bg-blue-400 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >
+                    <FaPlus className="mr-2" /> Ekle
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {additionalImages.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {additionalImages.map((image) => (
+                <div key={image.id} className="bg-white border border-gray-200 rounded-md overflow-hidden">
+                  <img
+                    src={image.url}
+                    alt={image.caption}
+                    className="w-full h-40 object-cover"
+                  />
+                  <div className="p-3">
+                    <p className="text-sm font-medium text-gray-900">{image.caption}</p>
+                    <div className="flex justify-end mt-2">
+                      <button
+                        type="button"
+                        onClick={() => removeAdditionalImage(image.id)}
+                        className="text-red-600 hover:text-red-900 text-sm"
+                      >
+                        <FaTrash className="inline mr-1" /> Sil
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center p-4 bg-gray-50 rounded-md">
+              <p className="text-gray-500">Henüz ek görsel eklenmemiş.</p>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={saving}
+            className={`flex items-center px-4 py-2 rounded-md text-white ${
+              saving
+                ? 'bg-blue-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
+          >
+            <FaSave className="mr-2" />
+            {saving ? 'Kaydediliyor...' : 'Kaydet'}
+          </button>
+        </div>
+      </form>
+    </div>
   );
-} 
+}

@@ -1,0 +1,37 @@
+// Firebase Storage kuralları - Authentication gerektiren kurallar
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Genel okuma izni, yazma için authentication gerekli
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Admin yükleme klasörleri için özel kurallar
+    match /press_coverage/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    match /history_images/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    match /gallery_images/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    match /board_members/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Test klasörü için açık izinler
+    match /test_uploads/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
