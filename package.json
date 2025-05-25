@@ -1,13 +1,14 @@
 {
   "name": "izorder",
   "version": "0.1.0",
-  "private": true,
-  "scripts": {
+  "private": true,  "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "init-firebase": "node scripts/init-firebase-data.js"
+    "init-firebase": "node scripts/init-firebase-data.js",
+    "export": "next build && next export",
+    "deploy": "npm run build"
   },
   "dependencies": {
     "autoprefixer": "^10.4.16",
