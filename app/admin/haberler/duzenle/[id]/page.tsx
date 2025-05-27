@@ -1,4 +1,3 @@
-import AdminLayout from '@/components/admin/AdminLayout';
 import NewsForm from '@/components/admin/NewsForm';
 import { getNewsById } from '@/utils/firebase/dataService';
 import { notFound } from 'next/navigation';
@@ -30,9 +29,9 @@ export default async function EditNewsPage({ params }: EditNewsPageProps) {
   }
   
   return (
-    <AdminLayout>
+    <>
       <h1 className="text-2xl font-bold mb-6">Haber Düzenle</h1>
       <NewsForm initialData={news} isEditing={true} />
-    </AdminLayout>
+    </>
   );
-} 
+}

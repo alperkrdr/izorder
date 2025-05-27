@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/utils/firebase/client';
 
+export const dynamic = "force-dynamic";
+
 export default function HistoryPage() {
   const [historyContent, setHistoryContent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -146,4 +148,4 @@ export default function HistoryPage() {
       )}
     </div>
   );
-} 
+}

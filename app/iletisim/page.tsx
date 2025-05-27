@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/utils/firebase/client';
 
+export const dynamic = "force-dynamic";
+
 export default function ContactPage() {
   const [contactInfo, setContactInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);

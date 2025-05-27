@@ -7,6 +7,8 @@ export const metadata = {
   description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği Haberleri',
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function NewsPage() {
   const news = await getAllNews();
   
@@ -42,4 +44,4 @@ export default async function NewsPage() {
       </div>
     </div>
   );
-} 
+}

@@ -4,6 +4,8 @@ import { getNewsBySlug, getAllNews } from '@/lib/data';
 import { FaArrowLeft, FaCalendarAlt } from 'react-icons/fa';
 import { notFound } from 'next/navigation';
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const news = await getNewsBySlug(params.slug);
   
@@ -71,4 +73,4 @@ export default async function NewsDetailPage({ params }: { params: { slug: strin
       </article>
     </div>
   );
-} 
+}

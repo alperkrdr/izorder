@@ -7,6 +7,8 @@ export const metadata = {
   description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği basın haberleri',
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function PressCoveragePage() {
   const pressCoverage = await getPressCoverage();
   
@@ -60,4 +62,4 @@ export default async function PressCoveragePage() {
       </div>
     </div>
   );
-} 
+}

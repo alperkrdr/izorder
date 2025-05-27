@@ -6,6 +6,8 @@ export const metadata = {
   description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği Fotoğraf Galerisi',
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function GalleryPage() {
   const galleryImages = await getAllGalleryImages();
   
@@ -37,4 +39,4 @@ export default async function GalleryPage() {
       </div>
     </div>
   );
-} 
+}

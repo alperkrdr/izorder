@@ -7,6 +7,8 @@ export const metadata = {
   description: 'İzmir Ordu İli ve İlçeleri Kültür Dayanışma ve Yardımlaşma Derneği Yönetim Kurulu',
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function BoardPage() {
   const boardMembers = await getBoardMembers();
   
@@ -67,4 +69,4 @@ export default async function BoardPage() {
       </div>
     </div>
   );
-} 
+}
