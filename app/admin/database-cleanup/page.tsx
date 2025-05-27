@@ -46,11 +46,10 @@ export default function DatabaseCleanupPage() {
       console.error('❌ Database cleanup failed:', err);
       setError(err instanceof Error ? err.message : 'Database cleanup failed');
     } finally {
-      setCleaning(false);
-    }
+      setCleaning(false);    }
   };
 
-  if (!currentUser) {
+  if (!user) {
     return (
       <div className="text-center py-8">
         <FaExclamationTriangle className="mx-auto h-12 w-12 text-red-500" />
