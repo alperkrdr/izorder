@@ -53,7 +53,7 @@ export default function BoardMemberEditForm({ id }: BoardMemberEditFormProps) {
   useEffect(() => {
     const fetchBoardMember = async () => {
       try {
-        const docRef = doc(db, 'boardMembers', id);
+        const docRef = doc(db, 'board_members', id);
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
@@ -152,7 +152,7 @@ export default function BoardMemberEditForm({ id }: BoardMemberEditFormProps) {
       }
 
       // Update document in Firestore
-      const docRef = doc(db, 'boardMembers', id);
+      const docRef = doc(db, 'board_members', id);
       await updateDoc(docRef, updateData);
 
       console.log('Board member updated successfully');

@@ -12,6 +12,7 @@ interface ContactInfo {
   email: string;
   mapEmbedUrl: string;
   workingHours: string;
+  googleFormUrl: string;
   socialMedia: {
     facebook?: string;
     twitter?: string;
@@ -26,6 +27,7 @@ export default function ContactManagementPage() {
     email: '',
     mapEmbedUrl: '',
     workingHours: '',
+    googleFormUrl: '',
     socialMedia: {
       facebook: '',
       instagram: '',
@@ -234,6 +236,24 @@ export default function ContactManagementPage() {
                 </p>
               </div>
               
+              {/* Google Form URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Üyelik Başvuru Google Form Linki
+                </label>
+                <input 
+                  type="text"
+                  name="googleFormUrl"
+                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={contactInfo.googleFormUrl}
+                  onChange={handleChange}
+                  placeholder="https://docs.google.com/forms/d/e/.../viewform"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Google Form'un paylaşım linkini buraya yapıştırın.
+                </p>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Facebook */}
                 <div>
@@ -290,4 +310,4 @@ export default function ContactManagementPage() {
       </div>
     </div>
   );
-} 
+}

@@ -1,4 +1,3 @@
-import AdminLayout from '@/components/admin/AdminLayout';
 import GalleryEditForm from '@/components/admin/GalleryEditForm';
 
 interface EditGalleryPageProps {
@@ -20,10 +19,5 @@ export async function generateMetadata({ params }: EditGalleryPageProps) {
 
 export default async function EditGalleryImagePage({ params }: EditGalleryPageProps) {
   const { id } = params;
-  
-  return (
-    <AdminLayout>
-      <GalleryEditForm id={id} />
-    </AdminLayout>
-  );
+  return <GalleryEditForm id={id} />;
 }

@@ -142,8 +142,10 @@ export default function ContactPage() {
             <h2 className="text-2xl font-semibold text-primary mb-4">Üyelik Başvurusu</h2>
             <p className="mb-4">Derneğimize üye olmak için aşağıdaki butona tıklayarak başvuru formunu doldurabilirsiniz.</p>
             <a 
-              href="/iletisim/uye-ol" 
+              href={contactInfo?.googleFormUrl || "/iletisim/uye-ol"}
               className="inline-block bg-secondary text-white px-6 py-3 rounded-lg font-medium hover:bg-secondary-dark transition-colors"
+              target={contactInfo?.googleFormUrl ? "_blank" : undefined}
+              rel={contactInfo?.googleFormUrl ? "noopener noreferrer" : undefined}
             >
               Üye Ol
             </a>
@@ -152,4 +154,4 @@ export default function ContactPage() {
       </div>
     </div>
   );
-} 
+}

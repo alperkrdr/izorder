@@ -1,4 +1,3 @@
-import AdminLayout from '@/components/admin/AdminLayout';
 import BoardMemberEditForm from '@/components/admin/BoardMemberEditForm';
 
 interface EditBoardMemberPageProps {
@@ -21,10 +20,5 @@ export async function generateMetadata({ params }: EditBoardMemberPageProps) {
 
 export default async function EditBoardMemberPage({ params }: EditBoardMemberPageProps) {
   const { id } = params;
-  
-  return (
-    <AdminLayout>
-      <BoardMemberEditForm id={id} />
-    </AdminLayout>
-  );
+  return <BoardMemberEditForm id={id} />;
 }
